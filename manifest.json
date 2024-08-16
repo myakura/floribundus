@@ -1,7 +1,7 @@
 {
 	"manifest_version": 2,
 	"name": "Floribundus",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "Sort tabs",
 	"icons": {
 		"48": "icons/icon_gray.png",
