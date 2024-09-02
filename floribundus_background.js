@@ -13,3 +13,9 @@ async function sortSelectedTabsByUrl() {
 browser.browserAction.onClicked.addListener(async () => {
 	await sortSelectedTabsByUrl();
 });
+
+browser.onCommand.addListener(async (command) => {
+	if (command.name === 'sort-tabs-by-url') {
+		await sortSelectedTabsByUrl();
+	}
+});
