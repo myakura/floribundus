@@ -27,12 +27,11 @@ function updateIcon() {
 			chrome.browserAction.setIcon({ path: 'icons/icon_lightgray.png' });
 			return;
 		}
+		const mqDarkMode = window.matchMedia('(prefers-color-scheme: dark)');
+		const isDarkMode = mqDarkMode?.matches ?? false;
+		const icon = isDarkMode ? 'icons/icon_white.png' : 'icons/icon_black.png';
+		chrome.browserAction.setIcon({ path: icon });
 	});
-
-	const mqDarkMode = window.matchMedia('(prefers-color-scheme: dark)');
-	const isDarkMode = mqDarkMode?.matches ?? false;
-	const icon = isDarkMode ? 'icons/icon_white.png' : 'icons/icon_black.png';
-	chrome.browserAction.setIcon({ path: icon });
 }
 
 chrome.windows.onFocusChanged.addListener(() => {
