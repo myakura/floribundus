@@ -14,16 +14,35 @@ function flashBadge({ success = true }) {
 	}, timeout);
 }
 
-function sortSelectedTabsByUrl() {
+function getSelectedTabs() {
+	const { promise, resolve, reject } = Promise.withResolvers();
 	chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
-		console.log(`floribundus: tabs obtained: ${tabs}`);
+		if (chrome.runtime.lastError) {
+			reject(chrome.runtime.lastError);
+			return;
+		}
+		console.group(`floribundus: tabs obtained.`);
+		tabs.forEach((tab) => {
+			console.log(tab);
+		});
+		console.groupEnd();
 
+		resolve(tabs);
+	});
+	return promise;
+}
+
+function sortSelectedTabsByUrl() {
+	getSelectedTabs().then((tabs) => {
 		const leftmostIndex = Math.min(...tabs.map(tab => tab.index));
 		const sortedTabs = tabs.sort((a, b) => a.url.localeCompare(b.url));
 
 		sortedTabs.forEach((tab, i) => {
 			chrome.tabs.move(tab.id, { index: leftmostIndex + i });
 		});
+	}).catch((error) => {
+		console.error(error);
+		flashBadge({ success: false });
 	});
 }
 
@@ -38,7 +57,7 @@ chrome.commands.onCommand.addListener((command) => {
 });
 
 function updateIcon() {
-	chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
+	getSelectedTabs().then((tabs) => {
 		if (tabs.length < 2) {
 			chrome.browserAction.setIcon({ path: 'icons/icon_lightgray.png' });
 			return;
@@ -47,6 +66,8 @@ function updateIcon() {
 		const isDarkMode = mqDarkMode?.matches ?? false;
 		const icon = isDarkMode ? 'icons/icon_white.png' : 'icons/icon_black.png';
 		chrome.browserAction.setIcon({ path: icon });
+	}).catch((error) => {
+		console.error(error);
 	});
 }
 
