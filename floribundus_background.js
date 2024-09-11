@@ -21,10 +21,8 @@ function getSelectedTabs() {
 			reject(chrome.runtime.lastError);
 			return;
 		}
-		console.group(`floribundus: tabs obtained.`);
-		tabs.forEach((tab) => {
-			console.log(tab);
-		});
+		console.group(`Tabs obtained.`);
+		tabs.forEach((tab) => console.log(tab));
 		console.groupEnd();
 
 		resolve(tabs);
