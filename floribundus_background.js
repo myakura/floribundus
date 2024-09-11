@@ -34,12 +34,20 @@ function getSelectedTabs() {
 
 function sortSelectedTabsByUrl() {
 	getSelectedTabs().then((tabs) => {
+		console.group('Sorting tabs...');
+		tabs.forEach((tab) => console.log(tab.url));
+		console.groupEnd();
+
 		const leftmostIndex = Math.min(...tabs.map(tab => tab.index));
 		const sortedTabs = tabs.sort((a, b) => a.url.localeCompare(b.url));
 
 		sortedTabs.forEach((tab, i) => {
 			chrome.tabs.move(tab.id, { index: leftmostIndex + i });
 		});
+
+		console.group('Sorted!');
+		sortedTabs.forEach((tab) => console.log(tab.url));
+		console.groupEnd();
 	}).catch((error) => {
 		console.error(error);
 		flashBadge({ success: false });
