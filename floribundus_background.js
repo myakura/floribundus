@@ -21,8 +21,12 @@ function getSelectedTabs() {
 			reject(chrome.runtime.lastError);
 			return;
 		}
-		console.group(`Tabs obtained.`);
-		tabs.forEach((tab) => console.log(tab));
+		console.group(`Tabs obtained.`, tabs);
+		tabs.forEach((tab) => {
+			console.log(tab.id);
+			console.log(tab.url);
+			console.log(tab.status);
+		});
 		console.groupEnd();
 
 		resolve(tabs);
@@ -80,10 +84,12 @@ function updateIcon() {
 chrome.windows.onFocusChanged.addListener(() => {
 	updateIcon();
 });
-chrome.tabs.onActivated.addListener(() => {
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+	console.log('Tab activated:', tabId);
 	updateIcon();
 });
-chrome.tabs.onHighlighted.addListener(() => {
+chrome.tabs.onHighlighted.addListener(({ tabIds }) => {
+	console.log('Tab highlighted:', tabIds);
 	updateIcon();
 });
 
