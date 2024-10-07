@@ -56,13 +56,63 @@ function sortSelectedTabsByUrl() {
 	});
 }
 
-chrome.browserAction.onClicked.addListener(() => {
-	sortSelectedTabsByUrl();
+
+async function sortSelectedTabsByDate() {
+	const tabs = await getSelectedTabs();
+	const tabIds = tabs.map(tab => tab.id);
+
+	const CHROME_EXTENSION_ID = 'mljeinehnapbddnpfpjiipnpdaeeemdi';
+	const port = chrome.runtime.connect(CHROME_EXTENSION_ID);
+
+	console.log('Connected to the external extension.', port);
+
+	port.postMessage({ action: 'get-dates-from-selected-tabs', tabIds });
+
+	port.onMessage.addListener((response) => {
+		if (response.error) {
+			console.error(response.error);
+			flashBadge({ success: false });
+			return;
+		}
+
+		const tabDataArray = response.data;
+		console.log('Received tab data with dates:', tabDataArray);
+
+		const dateMap = {};
+		tabDataArray.forEach(({ tabId, date }) => {
+			dateMap[tabId] = date;
+		});
+
+		const sortedTabs = tabs.sort((a, b) => {
+			const dateA = dateMap[a.id];
+			const dateB = dateMap[b.id];
+			return dateA.localeCompare(dateB);
+		});
+
+		const leftmostIndex = Math.min(...tabs.map(tab => tab.index));
+		sortedTabs.forEach((tab, i) => {
+			chrome.tabs.move(tab.id, { index: leftmostIndex + i });
+		});
+
+		console.log('Tabs sorted by date.');
+		flashBadge();
+	});
+
+	port.onDisconnect.addListener(() => {
+		console.log('Disconnected from the external extension.');
+	});
+}
+
+chrome.browserAction.onClicked.addListener(async () => {
+	await sortSelectedTabsByDate();
 });
 
-chrome.commands.onCommand.addListener((command) => {
+chrome.commands.onCommand.addListener(async (command) => {
 	if (command === 'sort-tabs-by-url') {
 		sortSelectedTabsByUrl();
+	}
+	if (command === 'sort-tabs-by-date') {
+		await sortSelectedTabsByDate();
 	}
 });
 
