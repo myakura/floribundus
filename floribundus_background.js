@@ -56,11 +56,10 @@ function sortSelectedTabsByUrl() {
 	});
 }
 
+async function fetchTabDates(tabs) {
+	const { promise, resolve, reject } = Promise.withResolvers();
 
-async function sortSelectedTabsByDate() {
-	const tabs = await getSelectedTabs();
 	const tabIds = tabs.map(tab => tab.id);
-
 	const CHROME_EXTENSION_ID = 'mljeinehnapbddnpfpjiipnpdaeeemdi';
 	const port = chrome.runtime.connect(CHROME_EXTENSION_ID);
 
@@ -72,35 +71,50 @@ async function sortSelectedTabsByDate() {
 		if (response.error) {
 			console.error(response.error);
 			flashBadge({ success: false });
+			reject(response.error);
 			return;
 		}
-
-		const tabDataArray = response.data;
-		console.log('Received tab data with dates:', tabDataArray);
-
-		const dateMap = {};
-		tabDataArray.forEach(({ tabId, date }) => {
-			dateMap[tabId] = date;
-		});
-
-		const sortedTabs = tabs.sort((a, b) => {
-			const dateA = dateMap[a.id];
-			const dateB = dateMap[b.id];
-			return dateA.localeCompare(dateB);
-		});
-
-		const leftmostIndex = Math.min(...tabs.map(tab => tab.index));
-		sortedTabs.forEach((tab, i) => {
-			chrome.tabs.move(tab.id, { index: leftmostIndex + i });
-		});
-
-		console.log('Tabs sorted by date.');
-		flashBadge();
+		console.log('Received tab data with dates:', response.data);
+		resolve(response.data);
 	});
 
 	port.onDisconnect.addListener(() => {
 		console.log('Disconnected from the external extension.');
 	});
+
+	return promise;
+}
+
+function sortTabsByDate(tabs, tabDataArray) {
+	const dateMap = {};
+	tabDataArray.forEach(({ tabId, date }) => {
+		dateMap[tabId] = date;
+	});
+
+	const sortedTabs = tabs.sort((a, b) => {
+		const dateA = dateMap[a.id];
+		const dateB = dateMap[b.id];
+		return dateA.localeCompare(dateB);
+	});
+
+	const leftmostIndex = Math.min(...tabs.map(tab => tab.index));
+	sortedTabs.forEach((tab, i) => {
+		chrome.tabs.move(tab.id, { index: leftmostIndex + i });
+	});
+
+	console.log('Tabs sorted by date.');
+	flashBadge();
+}
+
+async function sortSelectedTabsByDate() {
+	try {
+		const tabs = await getSelectedTabs();
+		const tabDataArray = await fetchTabDates(tabs);
+		sortTabsByDate(tabs, tabDataArray);
+	} catch (error) {
+		console.error(error);
+		flashBadge({ success: false });
+	}
 }
 
 chrome.browserAction.onClicked.addListener(async () => {
