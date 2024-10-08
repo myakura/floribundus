@@ -58,10 +58,16 @@ function sortSelectedTabsByUrl() {
 
 async function fetchTabDates(tabs) {
 	const { promise, resolve, reject } = Promise.withResolvers();
-
 	const tabIds = tabs.map(tab => tab.id);
+
 	const CHROME_EXTENSION_ID = 'mljeinehnapbddnpfpjiipnpdaeeemdi';
-	const port = chrome.runtime.connect(CHROME_EXTENSION_ID);
+	const FIREFOX_EXTENSION_ID = '{cf75506a-2c8d-4c0c-9515-9cb34297ad37}';
+
+	const extensionId = navigator.userAgent.includes('Firefox')
+		? FIREFOX_EXTENSION_ID
+		: CHROME_EXTENSION_ID;
+
+	const port = chrome.runtime.connect(extensionId);
 
 	console.log('Connected to the external extension.', port);
 
