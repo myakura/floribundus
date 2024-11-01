@@ -5,37 +5,35 @@ function flashBadge({ success = true }) {
 	const transparent = 'rgba(0, 0, 0, 0)';
 	const timeout = 1000;
 
-	chrome.browserAction.setBadgeText({ text: text });
-	chrome.browserAction.setBadgeBackgroundColor({ color: color });
+	chrome.action.setBadgeText({ text: text });
+	chrome.action.setBadgeBackgroundColor({ color: color });
 
 	setTimeout(() => {
-		chrome.browserAction.setBadgeText({ text: '' });
-		chrome.browserAction.setBadgeBackgroundColor({ color: transparent });
+		chrome.action.setBadgeText({ text: '' });
+		chrome.action.setBadgeBackgroundColor({ color: transparent });
 	}, timeout);
 }
 
-function getSelectedTabs() {
-	const { promise, resolve, reject } = Promise.withResolvers();
-	chrome.tabs.query({ currentWindow: true, highlighted: true }, (tabs) => {
-		if (chrome.runtime.lastError) {
-			reject(chrome.runtime.lastError);
-			return;
-		}
-		console.group(`Tabs obtained.`, tabs);
-		tabs.forEach((tab) => {
-			console.log(tab.id);
-			console.log(tab.url);
-			console.log(tab.status);
-		});
+async function getSelectedTabs() {
+	try {
+		const tabs = await chrome.tabs.query({ currentWindow: true, highlighted: true });
+
+		console.group('Tabs obtained.', tabs);
+		tabs.forEach((tab) => console.log(tab.id, tab.url, tab.status));
 		console.groupEnd();
 
-		resolve(tabs);
-	});
-	return promise;
+		return tabs;
+	}
+	catch (error) {
+		console.error(error);
+		return null;
+	}
 }
 
-function sortSelectedTabsByUrl() {
-	getSelectedTabs().then((tabs) => {
+async function sortSelectedTabsByUrl() {
+	try {
+		const tabs = await getSelectedTabs();
+
 		console.group('Sorting tabs...');
 		tabs.forEach((tab) => console.log(tab.url));
 		console.groupEnd();
@@ -50,15 +48,17 @@ function sortSelectedTabsByUrl() {
 		console.group('Sorted!');
 		sortedTabs.forEach((tab) => console.log(tab.url));
 		console.groupEnd();
-	}).catch((error) => {
+
+		flashBadge();
+	}
+	catch (error) {
 		console.error(error);
 		flashBadge({ success: false });
-	});
+	}
 }
 
 async function fetchTabDates(tabs) {
-	const { promise, resolve, reject } = Promise.withResolvers();
-	const tabIds = tabs.map(tab => tab.id);
+	const tabIds = tabs.map((tab) => tab.id);
 
 	const CHROME_EXTENSION_ID = 'mljeinehnapbddnpfpjiipnpdaeeemdi';
 	const FIREFOX_EXTENSION_ID = '{cf75506a-2c8d-4c0c-9515-9cb34297ad37}';
@@ -75,20 +75,16 @@ async function fetchTabDates(tabs) {
 
 	port.onMessage.addListener((response) => {
 		if (response.error) {
-			console.error(response.error);
 			flashBadge({ success: false });
-			reject(response.error);
-			return;
+			throw new Error(response.error);
 		}
 		console.log('Received tab data with dates:', response.data);
-		resolve(response.data);
+		return response.data;
 	});
 
 	port.onDisconnect.addListener(() => {
 		console.log('Disconnected from the external extension.');
 	});
-
-	return promise;
 }
 
 function sortTabsByDate(tabs, tabDataArray) {
@@ -117,13 +113,14 @@ async function sortSelectedTabsByDate() {
 		const tabs = await getSelectedTabs();
 		const tabDataArray = await fetchTabDates(tabs);
 		sortTabsByDate(tabs, tabDataArray);
-	} catch (error) {
+	}
+	catch (error) {
 		console.error(error);
 		flashBadge({ success: false });
 	}
 }
 
-chrome.browserAction.onClicked.addListener(async () => {
+chrome.action.onClicked.addListener(async () => {
 	await sortSelectedTabsByDate();
 });
 
@@ -136,28 +133,34 @@ chrome.commands.onCommand.addListener(async (command) => {
 	}
 });
 
-function updateIcon() {
-	getSelectedTabs().then((tabs) => {
+async function updateIcon() {
+	try {
+		const tabs = await getSelectedTabs();
+		// don't change the icon if there's only one tab
 		if (tabs.length < 2) {
-			chrome.browserAction.setIcon({ path: 'icons/icon_lightgray.png' });
+			chrome.action.setIcon({ path: 'icons/icon_lightgray.png' });
 			return;
 		}
-		const mqDarkMode = window.matchMedia('(prefers-color-scheme: dark)');
-		const isDarkMode = mqDarkMode?.matches ?? false;
+		const isDarkMode = !!globalThis.window ?
+			window.matchMedia('(prefers-color-scheme: dark)').matches
+			: false;
 		const icon = isDarkMode ? 'icons/icon_white.png' : 'icons/icon_black.png';
-		chrome.browserAction.setIcon({ path: icon });
-	}).catch((error) => {
+		chrome.action.setIcon({ path: icon });
+	}
+	catch (error) {
 		console.error(error);
-	});
+	}
 }
 
 chrome.windows.onFocusChanged.addListener(() => {
 	updateIcon();
 });
+
 chrome.tabs.onActivated.addListener(({ tabId }) => {
 	console.log('Tab activated:', tabId);
 	updateIcon();
 });
+
 chrome.tabs.onHighlighted.addListener(({ tabIds }) => {
 	console.log('Tab highlighted:', tabIds);
 	updateIcon();
