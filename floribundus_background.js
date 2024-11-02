@@ -25,7 +25,7 @@ async function getSelectedTabs() {
 		return tabs;
 	}
 	catch (error) {
-		console.error(error);
+		console.log(error);
 		return null;
 	}
 }
@@ -52,7 +52,7 @@ async function sortSelectedTabsByUrl() {
 		flashBadge();
 	}
 	catch (error) {
-		console.error(error);
+		console.log(error);
 		flashBadge({ success: false });
 	}
 }
@@ -115,7 +115,7 @@ async function sortSelectedTabsByDate() {
 		sortTabsByDate(tabs, tabDataArray);
 	}
 	catch (error) {
-		console.error(error);
+		console.log(error);
 		flashBadge({ success: false });
 	}
 }
@@ -148,7 +148,7 @@ async function updateIcon() {
 		chrome.action.setIcon({ path: icon });
 	}
 	catch (error) {
-		console.error(error);
+		console.log(error);
 	}
 }
 
