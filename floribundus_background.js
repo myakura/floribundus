@@ -133,6 +133,13 @@ chrome.commands.onCommand.addListener(async (command) => {
 	}
 });
 
+function isDarkMode() {
+	if ('matchMedia' in globalThis?.window === false) {
+		return false;
+	}
+	return window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
 async function updateIcon() {
 	try {
 		const tabs = await getSelectedTabs();
@@ -141,10 +148,7 @@ async function updateIcon() {
 			chrome.action.setIcon({ path: 'icons/icon_lightgray.png' });
 			return;
 		}
-		const isDarkMode = !!globalThis.window ?
-			window.matchMedia('(prefers-color-scheme: dark)').matches
-			: false;
-		const icon = isDarkMode ? 'icons/icon_white.png' : 'icons/icon_black.png';
+		const icon = isDarkMode() ? 'icons/icon_white.png' : 'icons/icon_black.png';
 		chrome.action.setIcon({ path: icon });
 	}
 	catch (error) {
