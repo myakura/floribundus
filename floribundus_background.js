@@ -57,7 +57,8 @@ async function sortSelectedTabsByUrl() {
 	}
 }
 
-async function fetchTabDates(tabs) {
+function fetchTabDates(tabs) {
+	const { promise, resolve, reject } = Promise.withResolvers();
 	const tabIds = tabs.map((tab) => tab.id);
 
 	const CHROME_EXTENSION_ID = 'mljeinehnapbddnpfpjiipnpdaeeemdi';
@@ -76,15 +77,18 @@ async function fetchTabDates(tabs) {
 	port.onMessage.addListener((response) => {
 		if (response.error) {
 			flashBadge({ success: false });
-			throw new Error(response.error);
+			reject(new Error(response.error));
+			return;
 		}
 		console.log('Received tab data with dates:', response.data);
-		return response.data;
+		resolve(response.data);
 	});
 
 	port.onDisconnect.addListener(() => {
 		console.log('Disconnected from the external extension.');
 	});
+
+	return promise;
 }
 
 function sortTabsByDate(tabs, tabDataArray) {
