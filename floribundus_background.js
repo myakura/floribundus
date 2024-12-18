@@ -134,7 +134,7 @@ chrome.commands.onCommand.addListener(async (command) => {
 });
 
 function isDarkMode() {
-	if ('matchMedia' in globalThis?.window === false) {
+	if (typeof window === 'undefined' || !('matchMedia' in window)) {
 		return false;
 	}
 	return window.matchMedia('(prefers-color-scheme: dark)').matches;
