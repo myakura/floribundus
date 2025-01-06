@@ -72,7 +72,22 @@ function fetchTabDates(tabs) {
 		? FIREFOX_EXTENSION_ID
 		: CHROME_EXTENSION_ID;
 
-	const port = chrome.runtime.connect(extensionId);
+	let port;
+
+	try {
+		port = chrome.runtime.connect(extensionId);
+	}
+	catch (err) {
+		console.error('Failed to connect to extension:', err);
+		flashBadge({ success: false });
+		return;
+	}
+
+	if (!port) {
+		console.log('No port: extension likely not installed.');
+		flashBadge({ success: false });
+		return;
+	}
 
 	console.log('Connected to the external extension.', port);
 
