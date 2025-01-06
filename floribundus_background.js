@@ -39,7 +39,11 @@ async function sortSelectedTabsByUrl() {
 		console.groupEnd();
 
 		const leftmostIndex = Math.min(...tabs.map(tab => tab.index));
-		const sortedTabs = tabs.sort((a, b) => a.url.localeCompare(b.url));
+		const sortedTabs = tabs.sort((a, b) => {
+			const urlA = a.url || '';
+			const urlB = b.url || '';
+			return urlA.localeCompare(urlB);
+		});
 
 		sortedTabs.forEach((tab, i) => {
 			chrome.tabs.move(tab.id, { index: leftmostIndex + i });
@@ -98,8 +102,8 @@ function sortTabsByDate(tabs, tabDataArray) {
 	});
 
 	const sortedTabs = tabs.sort((a, b) => {
-		const dateA = dateMap[a.id];
-		const dateB = dateMap[b.id];
+		const dateA = dateMap[a.id] || '';
+		const dateB = dateMap[b.id] || '';
 		return dateA.localeCompare(dateB);
 	});
 
