@@ -91,7 +91,7 @@ function fetchTabDates(tabs) {
 
 	console.log('Connected to the external extension.', port);
 
-	port.postMessage({ action: 'get-dates-from-selected-tabs', tabIds });
+	port.postMessage({ action: 'get-dates', tabIds });
 
 	port.onMessage.addListener((response) => {
 		if (response.error) {
