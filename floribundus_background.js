@@ -165,8 +165,8 @@ function isDarkMode() {
 
 async function updateIcon() {
 	try {
+		// visually disable the extension when there's no need to sort tabs
 		const tabs = await getSelectedTabs();
-		// don't change the icon if there's only one tab
 		if (tabs.length < 2) {
 			chrome.action.setIcon({ path: 'icons/icon_lightgray.png' });
 			return;
