@@ -72,39 +72,22 @@ function fetchTabDates(tabs) {
 		? FIREFOX_EXTENSION_ID
 		: CHROME_EXTENSION_ID;
 
-	let port;
+	chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds }, (response) => {
+		if (chrome.runtime.lastError) {
+			console.error('Failed to connect to extension:', chrome.runtime.lastError);
+			flashBadge({ success: false });
+			reject(new Error(chrome.runtime.lastError.message));
+			return;
+		}
 
-	try {
-		port = chrome.runtime.connect(extensionId);
-	}
-	catch (err) {
-		console.error('Failed to connect to extension:', err);
-		flashBadge({ success: false });
-		return;
-	}
-
-	if (!port) {
-		console.log('No port: extension likely not installed.');
-		flashBadge({ success: false });
-		return;
-	}
-
-	console.log('Connected to the external extension.', port);
-
-	port.postMessage({ action: 'get-dates', tabIds });
-
-	port.onMessage.addListener((response) => {
 		if (response.error) {
 			flashBadge({ success: false });
 			reject(new Error(response.error));
 			return;
 		}
+
 		console.log('Received tab data with dates:', response.data);
 		resolve(response.data);
-	});
-
-	port.onDisconnect.addListener(() => {
-		console.log('Disconnected from the external extension.');
 	});
 
 	return promise;
