@@ -73,10 +73,18 @@ function fetchTabDates(tabs) {
 		: CHROME_EXTENSION_ID;
 
 	chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds }, (response) => {
+		console.log('Got a response', response);
+
 		if (chrome.runtime.lastError) {
 			console.error('Failed to connect to extension:', chrome.runtime.lastError);
 			flashBadge({ success: false });
 			reject(new Error(chrome.runtime.lastError.message));
+			return;
+		}
+
+		if (!response) {
+			flashBadge({ success: false });
+			reject(new Error('No response'));
 			return;
 		}
 
