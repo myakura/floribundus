@@ -104,7 +104,7 @@ function fetchTabDates(tabs) {
 function sortTabsByDate(tabs, tabDataArray) {
 	const dateMap = {};
 	tabDataArray.forEach(({ tabId, date }) => {
-		const { year, month, day } = date;
+		const { year = '', month = '', day = '' } = date || {};
 		dateMap[tabId] = `${year}-${month}-${day}`;
 	});
 
