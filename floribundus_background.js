@@ -18,8 +18,8 @@ async function getSelectedTabs() {
 	try {
 		const tabs = await chrome.tabs.query({ currentWindow: true, highlighted: true });
 
-		console.group('Tabs obtained.', tabs);
-		tabs.forEach((tab) => console.log(tab.id, tab.url, tab.status));
+		console.group('Tabs obtained.');
+		tabs.forEach((tab) => console.log(tab.id, tab.url, tab.title));
 		console.groupEnd();
 
 		return tabs;
@@ -75,27 +75,54 @@ function fetchTabDates(tabs) {
 	chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds }, (response) => {
 		console.log('Got a response', response);
 
+		const fallbackData = tabIds.map(tabId => {
+			const tab = tabs.find(t => t.id === tabId);
+			return {
+				tabId,
+				url: tab.url,
+				title: null,
+				dateString: null,
+				date: { year: null, month: null, day: null },
+			};
+		});
+
 		if (chrome.runtime.lastError) {
 			console.error('Failed to connect to extension:', chrome.runtime.lastError);
 			flashBadge({ success: false });
-			reject(new Error(chrome.runtime.lastError.message));
+			resolve(fallbackData);
 			return;
 		}
 
-		if (!response) {
+		if (!response || response.error) {
 			flashBadge({ success: false });
-			reject(new Error('No response'));
-			return;
-		}
-
-		if (response.error) {
-			flashBadge({ success: false });
-			reject(new Error(response.error));
+			resolve(fallbackData);
 			return;
 		}
 
 		console.log('Received tab data with dates:', response.data);
-		resolve(response.data);
+
+		const dataByTabId = {};
+		response.data.forEach(item => {
+			dataByTabId[item.tabId] = item;
+		});
+
+		const completeData = tabIds.map(tabId => {
+			if (dataByTabId[tabId]) {
+				return dataByTabId[tabId];
+			}
+			else {
+				const tab = tabs.find(t => t.id === tabId);
+				return {
+					tabId,
+					url: tab.url,
+					title: null,
+					dateString: null,
+					date: { year: null, month: null, day: null },
+				};
+			}
+		});
+
+		resolve(completeData);
 	});
 
 	return promise;
