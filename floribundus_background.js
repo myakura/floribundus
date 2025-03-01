@@ -53,7 +53,7 @@ async function sortSelectedTabsByUrl() {
 		sortedTabs.forEach((tab) => console.log(tab.url));
 		console.groupEnd();
 
-		flashBadge();
+		flashBadge({ success: true });
 	}
 	catch (error) {
 		console.log(error);
@@ -153,7 +153,7 @@ function sortTabsByDate(tabs, tabDataArray) {
 	});
 
 	console.log('Tabs sorted by date.');
-	flashBadge();
+	flashBadge({ success: true });
 }
 
 async function sortSelectedTabsByDate() {
