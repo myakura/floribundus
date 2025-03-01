@@ -129,17 +129,23 @@ function fetchTabDates(tabs) {
 }
 
 function sortTabsByDate(tabs, tabDataArray) {
+	console.log('Sorting tabs by date...');
+	console.log('Tab data:', tabDataArray);
+	console.log('Curren tab ids:', tabs.map(tab => tab.id));
+
 	const dateMap = {};
 	tabDataArray.forEach(({ tabId, date }) => {
 		const { year = '', month = '', day = '' } = date || {};
 		dateMap[tabId] = `${year}-${month}-${day}`;
 	});
+	console.log('Date map:', dateMap);
 
 	const sortedTabs = tabs.sort((a, b) => {
 		const dateA = dateMap[a.id] || '';
 		const dateB = dateMap[b.id] || '';
 		return dateA.localeCompare(dateB);
 	});
+	console.log('Sorted tab ids:', sortedTabs.map(tab => tab.id));
 
 	const leftmostIndex = Math.min(...tabs.map(tab => tab.index));
 	sortedTabs.forEach((tab, i) => {
