@@ -66,8 +66,7 @@ async function sortSelectedTabsByUrl() {
 	}
 }
 
-function fetchTabDates(tabs) {
-	const { promise, resolve, reject } = Promise.withResolvers();
+async function fetchTabDates(tabs) {
 	const tabIds = tabs.map((tab) => tab.id);
 
 	const CHROME_EXTENSION_ID = 'mljeinehnapbddnpfpjiipnpdaeeemdi';
@@ -77,31 +76,24 @@ function fetchTabDates(tabs) {
 		? FIREFOX_EXTENSION_ID
 		: CHROME_EXTENSION_ID;
 
-	chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds }, async (response) => {
-		console.log('Got a response', response);
+	const fallbackData = tabIds.map(tabId => {
+		const tab = tabs.find(t => t.id === tabId);
+		return {
+			tabId,
+			url: tab.url,
+			title: null,
+			dateString: null,
+			date: { year: null, month: null, day: null },
+		};
+	});
 
-		const fallbackData = tabIds.map(tabId => {
-			const tab = tabs.find(t => t.id === tabId);
-			return {
-				tabId,
-				url: tab.url,
-				title: null,
-				dateString: null,
-				date: { year: null, month: null, day: null },
-			};
-		});
+	try {
+		const response = await chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds });
 
-		if (chrome.runtime.lastError) {
-			console.error('Failed to connect to extension:', chrome.runtime.lastError);
+		if (!response || !response.data || response.error) {
+			console.error('Failed to fetch tab dates:', response);
 			await flashBadge({ success: false });
-			resolve(fallbackData);
-			return;
-		}
-
-		if (!response || response.error) {
-			await flashBadge({ success: false });
-			resolve(fallbackData);
-			return;
+			return fallbackData;
 		}
 
 		console.log('Received tab data with dates:', response.data);
@@ -127,10 +119,13 @@ function fetchTabDates(tabs) {
 			}
 		});
 
-		resolve(completeData);
-	});
-
-	return promise;
+		return completeData;
+	}
+	catch (error) {
+		console.error('Failed to fetch tab dates:', error);
+		await flashBadge({ success: false });
+		return fallbackData;
+	}
 }
 
 async function sortTabsByDate(tabs, tabDataArray) {
