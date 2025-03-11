@@ -75,7 +75,7 @@ async function fetchTabDates(tabs) {
 	const tabIds = tabs.map((tab) => tab.id);
 
 	const CHROME_EXTENSION_ID = 'mljeinehnapbddnpfpjiipnpdaeeemdi';
-	const FIREFOX_EXTENSION_ID = '{cf75506a-2c8d-4c0c-9515-9cb34297ad37}';
+	const FIREFOX_EXTENSION_ID = '{a3d35f84-d68a-456c-8e85-55a25306f580}';
 
 	const extensionId = navigator.userAgent.includes('Firefox')
 		? FIREFOX_EXTENSION_ID
