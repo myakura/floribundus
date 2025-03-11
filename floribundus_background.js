@@ -93,18 +93,50 @@ async function fetchTabDates(tabs) {
 	});
 
 	try {
+		console.log('Sending message to extension:', { action: 'get-dates', tabIds });
+
 		const response = await chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds });
 
-		if (!response || !response.data || response.error) {
-			console.error('Failed to fetch tab dates:', response);
+		console.log('Raw response from extension:', response);
+		console.log('Response type:', typeof response);
+
+		// Handle different response formats
+		let processedData;
+
+		if (response === true) {
+			console.warn('Extension returned boolean true instead of data');
+			return fallbackData;
+		}
+		else if (!response) {
+			console.error('No response from extension');
+			await flashBadge({ success: false });
+			return fallbackData;
+		}
+		else if (response.error) {
+			console.error('Extension returned error:', response.error);
+			await flashBadge({ success: false });
+			return fallbackData;
+		}
+		else if (Array.isArray(response)) {
+			// Some extensions might return the data directly as an array
+			console.log('Response is an array, using directly');
+			processedData = response;
+		}
+		else if (response.data && Array.isArray(response.data)) {
+			// Expected format: { data: [...] }
+			console.log('Using response.data array');
+			processedData = response.data;
+		}
+		else {
+			console.error('Unexpected response format:', response);
 			await flashBadge({ success: false });
 			return fallbackData;
 		}
 
-		console.log('Received tab data with dates:', response.data);
+		console.log('Processed data:', processedData);
 
 		const dataByTabId = {};
-		response.data.forEach(item => {
+		processedData.forEach(item => {
 			dataByTabId[item.tabId] = item;
 		});
 
