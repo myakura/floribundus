@@ -174,7 +174,7 @@ chrome.action.onClicked.addListener(async () => {
 
 chrome.commands.onCommand.addListener(async (command) => {
 	if (command === 'sort-tabs-by-url') {
-		sortSelectedTabsByUrl();
+		await sortSelectedTabsByUrl();
 	}
 	if (command === 'sort-tabs-by-date') {
 		await sortSelectedTabsByDate();
