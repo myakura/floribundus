@@ -1,17 +1,22 @@
-function flashBadge({ success = true }) {
+async function flashBadge({ success = true }) {
 	// credit: https://github.com/chitsaou/copy-as-markdown
 	const text = success ? '✔' : '✘';
 	const color = success ? 'hsl(135, 70%, 30%)' : 'hsl(0, 80%, 40%)';
 	const transparent = 'rgba(0, 0, 0, 0)';
 	const timeout = 1000;
 
-	chrome.action.setBadgeText({ text: text });
-	chrome.action.setBadgeBackgroundColor({ color: color });
+	try {
+		await chrome.action.setBadgeText({ text: text });
+		await chrome.action.setBadgeBackgroundColor({ color: color });
 
-	setTimeout(() => {
-		chrome.action.setBadgeText({ text: '' });
-		chrome.action.setBadgeBackgroundColor({ color: transparent });
-	}, timeout);
+		setTimeout(async () => {
+			await chrome.action.setBadgeText({ text: '' });
+			await chrome.action.setBadgeBackgroundColor({ color: transparent });
+		}, timeout);
+	}
+	catch (error) {
+		console.error('Failed to update badge:', error);
+	}
 }
 
 async function getSelectedTabs() {
@@ -53,11 +58,11 @@ async function sortSelectedTabsByUrl() {
 		sortedTabs.forEach((tab) => console.log(tab.url));
 		console.groupEnd();
 
-		flashBadge({ success: true });
+		await flashBadge({ success: true });
 	}
 	catch (error) {
 		console.log(error);
-		flashBadge({ success: false });
+		await flashBadge({ success: false });
 	}
 }
 
@@ -72,7 +77,7 @@ function fetchTabDates(tabs) {
 		? FIREFOX_EXTENSION_ID
 		: CHROME_EXTENSION_ID;
 
-	chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds }, (response) => {
+	chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds }, async (response) => {
 		console.log('Got a response', response);
 
 		const fallbackData = tabIds.map(tabId => {
@@ -88,13 +93,13 @@ function fetchTabDates(tabs) {
 
 		if (chrome.runtime.lastError) {
 			console.error('Failed to connect to extension:', chrome.runtime.lastError);
-			flashBadge({ success: false });
+			await flashBadge({ success: false });
 			resolve(fallbackData);
 			return;
 		}
 
 		if (!response || response.error) {
-			flashBadge({ success: false });
+			await flashBadge({ success: false });
 			resolve(fallbackData);
 			return;
 		}
@@ -128,7 +133,7 @@ function fetchTabDates(tabs) {
 	return promise;
 }
 
-function sortTabsByDate(tabs, tabDataArray) {
+async function sortTabsByDate(tabs, tabDataArray) {
 	console.log('Sorting tabs by date...');
 	console.log('Tab data:', tabDataArray);
 	console.log('Curren tab ids:', tabs.map(tab => tab.id));
@@ -153,7 +158,7 @@ function sortTabsByDate(tabs, tabDataArray) {
 	});
 
 	console.log('Tabs sorted by date.');
-	flashBadge({ success: true });
+	await flashBadge({ success: true });
 }
 
 async function sortSelectedTabsByDate() {
@@ -164,7 +169,7 @@ async function sortSelectedTabsByDate() {
 	}
 	catch (error) {
 		console.log(error);
-		flashBadge({ success: false });
+		await flashBadge({ success: false });
 	}
 }
 
