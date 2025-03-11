@@ -160,7 +160,7 @@ async function sortSelectedTabsByDate() {
 	try {
 		const tabs = await getSelectedTabs();
 		const tabDataArray = await fetchTabDates(tabs);
-		sortTabsByDate(tabs, tabDataArray);
+		await sortTabsByDate(tabs, tabDataArray);
 	}
 	catch (error) {
 		console.log(error);
