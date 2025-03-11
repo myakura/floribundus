@@ -153,9 +153,9 @@ async function sortTabsByDate(tabs, tabDataArray) {
 	console.log('Sorted tab ids:', sortedTabs.map(tab => tab.id));
 
 	const leftmostIndex = Math.min(...tabs.map(tab => tab.index));
-	sortedTabs.forEach((tab, i) => {
-		chrome.tabs.move(tab.id, { index: leftmostIndex + i });
-	});
+	await Promise.all(sortedTabs.map((tab, i) =>
+		chrome.tabs.move(tab.id, { index: leftmostIndex + i }).catch(err => console.error(`Failed to move tab ${tab.id}:`, err))
+	));
 
 	console.log('Tabs sorted by date.');
 	await flashBadge({ success: true });
