@@ -131,7 +131,7 @@ async function fetchTabDates(tabs) {
 async function sortTabsByDate(tabs, tabDataArray) {
 	console.log('Sorting tabs by date...');
 	console.log('Tab data:', tabDataArray);
-	console.log('Curren tab ids:', tabs.map(tab => tab.id));
+	console.log('Current tab ids:', tabs.map(tab => tab.id));
 
 	const dateMap = {};
 	tabDataArray.forEach(({ tabId, date }) => {
