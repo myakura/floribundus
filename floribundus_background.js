@@ -38,6 +38,11 @@ async function getSelectedTabs() {
 async function sortSelectedTabsByUrl() {
 	try {
 		const tabs = await getSelectedTabs();
+		if (!tabs || tabs.length === 0) {
+			console.error('No tabs found.');
+			await flashBadge({ success: false });
+			return;
+		}
 
 		console.group('Sorting tabs...');
 		tabs.forEach((tab) => console.log(tab.url));
@@ -50,9 +55,9 @@ async function sortSelectedTabsByUrl() {
 			return urlA.localeCompare(urlB);
 		});
 
-		sortedTabs.forEach((tab, i) => {
-			chrome.tabs.move(tab.id, { index: leftmostIndex + i });
-		});
+		await Promise.all(sortedTabs.map((tab, i) =>
+			chrome.tabs.move(tab.id, { index: leftmostIndex + i }).catch(err => console.error(`Failed to move tab ${tab.id}:`, err))
+		));
 
 		console.group('Sorted!');
 		sortedTabs.forEach((tab) => console.log(tab.url));
