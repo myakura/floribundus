@@ -225,33 +225,35 @@ function isDarkMode() {
 }
 
 async function updateIcon() {
+	const icon = isDarkMode() ? 'icons/icon_white.png' : 'icons/icon_black.png';
 	try {
-		// visually disable the extension when there's no need to sort tabs
+		await chrome.action.setIcon({ path: icon });
+
 		const tabs = await getSelectedTabs();
 		if (tabs.length < 2) {
-			chrome.action.setIcon({ path: 'icons/icon_lightgray.png' });
+			await chrome.action.disable();
 			return;
 		}
-		const icon = isDarkMode() ? 'icons/icon_white.png' : 'icons/icon_black.png';
-		chrome.action.setIcon({ path: icon });
+
+		await chrome.action.enable();
 	}
 	catch (error) {
 		console.log(error);
 	}
 }
 
-chrome.windows.onFocusChanged.addListener(() => {
-	updateIcon();
+chrome.windows.onFocusChanged.addListener(async () => {
+	await updateIcon();
 });
 
-chrome.tabs.onActivated.addListener(({ tabId }) => {
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 	console.log('Tab activated:', tabId);
-	updateIcon();
+	await updateIcon();
 });
 
-chrome.tabs.onHighlighted.addListener(({ tabIds }) => {
+chrome.tabs.onHighlighted.addListener(async ({ tabIds }) => {
 	console.log('Tab highlighted:', tabIds);
-	updateIcon();
+	await updateIcon();
 });
 
-updateIcon();
+await updateIcon();
