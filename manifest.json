@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Floribundus",
-	"version": "0.7.12",
+	"version": "0.7.13",
 	"description": "Sort tabs",
 	"icons": {
 		"48": "icons/icon_gray.png",
@@ -34,6 +34,12 @@
 		"gecko": {
 			"id": "{ea9d3a55-e821-4554-a9ce-e3e93b011b32}",
 			"strict_min_version": "121.0"
+		}
+	},
+	"externals": {
+		"heliotropium": {
+			"CHROME_EXTENSION_ID": "mljeinehnapbddnpfpjiipnpdaeeemdi",
+			"FIREFOX_EXTENSION_ID": "{a3d35f84-d68a-456c-8e85-55a25306f580}"
 		}
 	}
 }
