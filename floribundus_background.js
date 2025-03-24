@@ -15,7 +15,7 @@ async function flashBadge({ success = true }) {
 		}, timeout);
 	}
 	catch (error) {
-		console.error('Failed to update badge:', error);
+		console.log(error);
 	}
 }
 
@@ -39,7 +39,7 @@ async function sortSelectedTabsByUrl() {
 	try {
 		const tabs = await getSelectedTabs();
 		if (!tabs || tabs.length === 0) {
-			console.error('No tabs found.');
+			console.log('No tabs found.');
 			await flashBadge({ success: false });
 			return;
 		}
@@ -56,7 +56,7 @@ async function sortSelectedTabsByUrl() {
 		});
 
 		await Promise.all(sortedTabs.map((tab, i) =>
-			chrome.tabs.move(tab.id, { index: leftmostIndex + i }).catch(err => console.error(`Failed to move tab ${tab.id}:`, err))
+			chrome.tabs.move(tab.id, { index: leftmostIndex + i }).catch(err => console.log(`Failed to move tab ${tab.id}:`, err))
 		));
 
 		console.group('Sorted!');
@@ -107,12 +107,12 @@ async function fetchTabDates(tabs) {
 			return fallbackData;
 		}
 		else if (!response) {
-			console.error('No response from extension');
+			console.log('No response from extension');
 			await flashBadge({ success: false });
 			return fallbackData;
 		}
 		else if (response.error) {
-			console.error('Extension returned error:', response.error);
+			console.log('Extension returned error:', response.error);
 			await flashBadge({ success: false });
 			return fallbackData;
 		}
@@ -127,7 +127,7 @@ async function fetchTabDates(tabs) {
 			processedData = response.data;
 		}
 		else {
-			console.error('Unexpected response format:', response);
+			console.log('Unexpected response format:', response);
 			await flashBadge({ success: false });
 			return fallbackData;
 		}
@@ -158,7 +158,7 @@ async function fetchTabDates(tabs) {
 		return completeData;
 	}
 	catch (error) {
-		console.error('Failed to fetch tab dates:', error);
+		console.log('Failed to fetch tab dates:', error);
 		await flashBadge({ success: false });
 		return fallbackData;
 	}
@@ -185,7 +185,7 @@ async function sortTabsByDate(tabs, tabDataArray) {
 
 	const leftmostIndex = Math.min(...tabs.map(tab => tab.index));
 	await Promise.all(sortedTabs.map((tab, i) =>
-		chrome.tabs.move(tab.id, { index: leftmostIndex + i }).catch(err => console.error(`Failed to move tab ${tab.id}:`, err))
+		chrome.tabs.move(tab.id, { index: leftmostIndex + i }).catch(err => console.log(`Failed to move tab ${tab.id}:`, err))
 	));
 
 	console.log('Tabs sorted by date.');
