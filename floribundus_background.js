@@ -257,6 +257,10 @@ chrome.tabs.onHighlighted.addListener(async ({ tabIds }) => {
 });
 
 // top-level await is not supported in service workers
-updateIcon().catch((error) => {
-	console.log('Error on initialization:', error)
-});
+function initialize() {
+	updateIcon().catch((error) => {
+		console.log('Error on initialization:', error);
+	});
+}
+
+initialize();
