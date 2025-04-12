@@ -230,7 +230,7 @@ async function updateIcon() {
 		await chrome.action.setIcon({ path: icon });
 
 		const tabs = await getSelectedTabs();
-		if (!tabs || tabs.length < 2) {
+		if (tabs.length < 2) {
 			await chrome.action.disable();
 			return;
 		}
