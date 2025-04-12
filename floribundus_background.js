@@ -31,7 +31,7 @@ async function getSelectedTabs() {
 	}
 	catch (error) {
 		console.log(error);
-		return null;
+		return [];
 	}
 }
 
@@ -230,7 +230,7 @@ async function updateIcon() {
 		await chrome.action.setIcon({ path: icon });
 
 		const tabs = await getSelectedTabs();
-		if (tabs.length < 2) {
+		if (!tabs || tabs.length < 2) {
 			await chrome.action.disable();
 			return;
 		}
