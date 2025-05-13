@@ -35,6 +35,31 @@ async function getSelectedTabs() {
 	}
 }
 
+async function moveTabs(originalTabs, sortedTabs) {
+	const startIndex = Math.min(...originalTabs.map(tab => tab.index));
+
+	console.group('Sorting tabs...');
+	originalTabs.forEach((tab) => console.log(tab.url));
+	console.groupEnd();
+
+	try {
+		await Promise.all(sortedTabs.map((tab, i) =>
+			chrome.tabs.move(tab.id, { index: startIndex + i })
+				.catch(err => console.log(`Failed to move tab ${tab.id}:`, err))
+		));
+
+		console.group('Sorted!');
+		sortedTabs.forEach((tab) => console.log(tab.url));
+		console.groupEnd();
+
+		await flashBadge({ success: true });
+	}
+	catch (error) {
+		console.error('Error moving tabs:', error);
+		await flashBadge({ success: false });
+	}
+}
+
 async function sortSelectedTabsByUrl() {
 	try {
 		const tabs = await getSelectedTabs();
