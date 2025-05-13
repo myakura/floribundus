@@ -176,32 +176,29 @@ async function fetchTabDates(tabs) {
 	}
 }
 
-async function sortTabsByDate(tabs, tabDataArray) {
-	console.log('Sorting tabs by date...');
-	console.log('Tab data:', tabDataArray);
-	console.log('Current tab ids:', tabs.map(tab => tab.id));
-
-	const dateMap = {};
-	tabDataArray.forEach(({ tabId, date }) => {
-		const { year = '', month = '', day = '' } = date || {};
-		dateMap[tabId] = `${year}-${month}-${day}`;
-	});
-	console.log('Date map:', dateMap);
-
-	const sortedTabs = [...tabs].sort((a, b) => {
-		const dateA = dateMap[a.id] || '';
-		const dateB = dateMap[b.id] || '';
-		return dateA.localeCompare(dateB);
-	});
-
-	await moveTabs(tabs, sortedTabs);
-}
-
 async function sortSelectedTabsByDate() {
 	try {
 		const tabs = await getSelectedTabs();
 		const tabDataArray = await fetchTabDates(tabs);
-		await sortTabsByDate(tabs, tabDataArray);
+
+		console.log('Sorting tabs by date...');
+		console.log('Tab data:', tabDataArray);
+		console.log('Current tab ids:', tabs.map(tab => tab.id));
+
+		const dateMap = {};
+		tabDataArray.forEach(({ tabId, date }) => {
+			const { year = '', month = '', day = '' } = date || {};
+			dateMap[tabId] = `${year}-${month}-${day}`;
+		});
+		console.log('Date map:', dateMap);
+
+		const sortedTabs = [...tabs].sort((a, b) => {
+			const dateA = dateMap[a.id] || '';
+			const dateB = dateMap[b.id] || '';
+			return dateA.localeCompare(dateB);
+		});
+
+		await moveTabs(tabs, sortedTabs);
 	}
 	catch (error) {
 		console.log(error);
