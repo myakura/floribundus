@@ -69,26 +69,13 @@ async function sortSelectedTabsByUrl() {
 			return;
 		}
 
-		console.group('Sorting tabs...');
-		tabs.forEach((tab) => console.log(tab.url));
-		console.groupEnd();
-
-		const leftmostIndex = Math.min(...tabs.map(tab => tab.index));
-		const sortedTabs = tabs.sort((a, b) => {
+		const sortedTabs = [...tabs].sort((a, b) => {
 			const urlA = a.url || '';
 			const urlB = b.url || '';
 			return urlA.localeCompare(urlB);
 		});
 
-		await Promise.all(sortedTabs.map((tab, i) =>
-			chrome.tabs.move(tab.id, { index: leftmostIndex + i }).catch(err => console.log(`Failed to move tab ${tab.id}:`, err))
-		));
-
-		console.group('Sorted!');
-		sortedTabs.forEach((tab) => console.log(tab.url));
-		console.groupEnd();
-
-		await flashBadge({ success: true });
+		await moveTabs(tabs, sortedTabs);
 	}
 	catch (error) {
 		console.log(error);
