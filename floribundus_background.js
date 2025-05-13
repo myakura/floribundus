@@ -188,20 +188,13 @@ async function sortTabsByDate(tabs, tabDataArray) {
 	});
 	console.log('Date map:', dateMap);
 
-	const sortedTabs = tabs.sort((a, b) => {
+	const sortedTabs = [...tabs].sort((a, b) => {
 		const dateA = dateMap[a.id] || '';
 		const dateB = dateMap[b.id] || '';
 		return dateA.localeCompare(dateB);
 	});
-	console.log('Sorted tab ids:', sortedTabs.map(tab => tab.id));
 
-	const leftmostIndex = Math.min(...tabs.map(tab => tab.index));
-	await Promise.all(sortedTabs.map((tab, i) =>
-		chrome.tabs.move(tab.id, { index: leftmostIndex + i }).catch(err => console.log(`Failed to move tab ${tab.id}:`, err))
-	));
-
-	console.log('Tabs sorted by date.');
-	await flashBadge({ success: true });
+	await moveTabs(tabs, sortedTabs);
 }
 
 async function sortSelectedTabsByDate() {
