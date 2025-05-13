@@ -205,6 +205,7 @@ async function sortSelectedTabsByDate() {
 }
 
 chrome.action.onClicked.addListener(async () => {
+	// fixme: use `sortSelectedTabsByUrl()` by default. change to `sortSelectedTabsByDate()` if heliotropium is installed
 	await sortSelectedTabsByDate();
 });
 
