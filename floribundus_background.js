@@ -36,7 +36,9 @@ async function getSelectedTabs() {
 }
 
 async function moveTabs(originalTabs, sortedTabs) {
-	const startIndex = Math.min(...originalTabs.map(tab => tab.index));
+	// Align tabs to the right edge of the selected tabs
+	const rightmostIndex = Math.max(...originalTabs.map(tab => tab.index));
+	const startIndex = rightmostIndex - sortedTabs.length + 1;
 
 	console.group('Sorting tabs...');
 	originalTabs.forEach((tab) => console.log(tab.url));
