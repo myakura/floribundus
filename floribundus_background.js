@@ -71,7 +71,7 @@ async function sortSelectedTabsByUrl() {
 			return;
 		}
 
-		const sortedTabs = [...tabs].sort((a, b) => {
+		const sortedTabs = tabs.toSorted((a, b) => {
 			const urlA = a.url || '';
 			const urlB = b.url || '';
 			return urlA.localeCompare(urlB);
@@ -194,7 +194,7 @@ async function sortSelectedTabsByDate() {
 		});
 		console.log('Date map:', dateMap);
 
-		const sortedTabs = [...tabs].sort((a, b) => {
+		const sortedTabs = tabs.toSorted((a, b) => {
 			const dateA = dateMap[a.id] || '';
 			const dateB = dateMap[b.id] || '';
 			return dateA.localeCompare(dateB);
