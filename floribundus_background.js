@@ -116,11 +116,7 @@ async function fetchTabDates(tabs) {
 		// Handle different response formats
 		let processedData;
 
-		if (response === true) {
-			console.warn('Extension returned boolean true instead of data');
-			return fallbackData;
-		}
-		else if (!response) {
+		if (!response) {
 			console.log('No response from extension');
 			await flashBadge({ success: false });
 			return fallbackData;
@@ -129,11 +125,6 @@ async function fetchTabDates(tabs) {
 			console.log('Extension returned error:', response.error);
 			await flashBadge({ success: false });
 			return fallbackData;
-		}
-		else if (Array.isArray(response)) {
-			// Some extensions might return the data directly as an array
-			console.log('Response is an array, using directly');
-			processedData = response;
 		}
 		else if (response.data && Array.isArray(response.data)) {
 			// Expected format: { data: [...] }
