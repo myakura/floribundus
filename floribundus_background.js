@@ -15,7 +15,7 @@ async function flashBadge({ success = true }) {
 		}, timeout);
 	}
 	catch (error) {
-		console.log(error);
+		console.error('Failed to update badge:', error);
 	}
 }
 
@@ -30,7 +30,7 @@ async function getSelectedTabs() {
 		return tabs;
 	}
 	catch (error) {
-		console.log(error);
+		console.error('Failed to get selected tabs:', error);
 		return [];
 	}
 }
