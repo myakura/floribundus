@@ -45,10 +45,9 @@ async function moveTabs(originalTabs, sortedTabs) {
 	console.groupEnd();
 
 	try {
-		await Promise.all(sortedTabs.map((tab, i) =>
-			chrome.tabs.move(tab.id, { index: startIndex + i })
-				.catch(err => console.log(`Failed to move tab ${tab.id}:`, err))
-		));
+		await Promise.all(sortedTabs.map((tab, i) => {
+			return chrome.tabs.move(tab.id, { index: startIndex + i });
+		}));
 
 		console.group('Sorted!');
 		sortedTabs.forEach((tab) => console.log(tab.url));
