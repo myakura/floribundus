@@ -19,6 +19,16 @@ async function flashBadge({ success = true }) {
 	}
 }
 
+async function setWorkingBadge() {
+	try {
+		await chrome.action.setBadgeText({ text: '...' });
+		await chrome.action.setBadgeBackgroundColor({ color: 'hsl(225, 100%, 60%)' });
+	}
+	catch (error) {
+		console.error('Failed to set working badge:', error);
+	}
+}
+
 async function getSelectedTabs() {
 	try {
 		const tabs = await chrome.tabs.query({ currentWindow: true, highlighted: true });
@@ -63,6 +73,7 @@ async function moveTabs(originalTabs, sortedTabs) {
 
 async function sortSelectedTabsByUrl() {
 	try {
+		await setWorkingBadge();
 		const tabs = await getSelectedTabs();
 		if (!tabs || tabs.length === 0) {
 			console.log('No tabs found.');
@@ -188,6 +199,7 @@ async function fetchTabDates(tabs) {
 
 async function sortSelectedTabsByDate() {
 	try {
+		await setWorkingBadge();
 		const tabs = await getSelectedTabs();
 		const tabDataArray = await fetchTabDates(tabs);
 
