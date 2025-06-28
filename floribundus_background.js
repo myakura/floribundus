@@ -85,6 +85,24 @@ async function sortSelectedTabsByUrl() {
 }
 
 async function fetchTabDates(tabs) {
+	const unloadedTabs = tabs.filter(tab => tab.discarded || tab.status !== 'complete');
+
+	if (unloadedTabs.length > 0) {
+		const reloadPromises = unloadedTabs.map(tab => {
+			return new Promise(resolve => {
+				const listener = (tabId, changeInfo) => {
+					if (tabId === tab.id && changeInfo.status === 'complete') {
+						chrome.tabs.onUpdated.removeListener(listener);
+						resolve();
+					}
+				};
+				chrome.tabs.onUpdated.addListener(listener);
+				chrome.tabs.reload(tab.id);
+			});
+		});
+		await Promise.all(reloadPromises);
+	}
+
 	const tabIds = tabs.map((tab) => tab.id);
 
 	const manifest = chrome.runtime.getManifest();
