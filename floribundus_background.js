@@ -20,6 +20,22 @@
  */
 
 /**
+ * @typedef {Object} ParsedDate
+ * @property {string|null} year - The year as a string (e.g., "2024") or null if not available
+ * @property {string|null} month - The month as a zero-padded string (e.g., "01", "12") or null if not available
+ * @property {string|null} day - The day as a zero-padded string (e.g., "01", "31") or null if not available
+ */
+
+/**
+ * @typedef {Object} TabDateInfo
+ * @property {number} tabId - The ID of the tab
+ * @property {string} url - The URL of the tab
+ * @property {string|null} title - The title of the tab, or null if not available
+ * @property {string|null} dateString - The raw date string found on the page, or null if no date found
+ * @property {ParsedDate|null} date - The parsed date object, or null if no date could be parsed
+ */
+
+/**
  * Displays a temporary badge on the extension icon to indicate success or failure
  * @param {Object} options - Options for the badge
  * @param {boolean} [options.success=true] - Whether the operation was successful
@@ -139,13 +155,7 @@ async function sortSelectedTabsByUrl() {
 /**
  * Fetches date information for tabs using the heliotropium extension
  * @param {ChromeTab[]} tabs - Array of tabs to fetch dates for
- * @returns {Promise<Array<{
- *   tabId: number,
- *   url: string,
- *   title: string|null,
- *   dateString: string|null,
- *   date: {year: string|null, month: string|null, day: string|null}|null
- * }>>} Array of tab data objects with date information from heliotropium extension
+ * @returns {Promise<TabDateInfo[]>} Array of tab data objects with date information from heliotropium extension
  */
 async function fetchTabDates(tabs) {
 	const unloadedTabs = tabs.filter(tab => tab.discarded || tab.status !== 'complete');
