@@ -5,14 +5,11 @@
  * @property {number} windowId - The ID of the window the tab is contained within
  * @property {string} [url] - The URL the tab is displaying. This property is only present if the extension's manifest includes the "tabs" permission
  * @property {string} [title] - The title of the tab. This property is only present if the extension's manifest includes the "tabs" permission
- * @property {string} [favIconUrl] - The URL of the tab's favicon. This property is only present if the extension's manifest includes the "tabs" permission
  * @property {string} status - Either "loading" or "complete"
  * @property {boolean} active - Whether the tab is active in its window (does not necessarily mean the window is focused)
  * @property {boolean} highlighted - Whether the tab is highlighted
  * @property {boolean} pinned - Whether the tab is pinned
- * @property {boolean} audible - Whether the tab has produced sound over the past couple of seconds
  * @property {boolean} discarded - Whether the tab is discarded. A discarded tab is one whose content has been unloaded from memory
- * @property {boolean} autoDiscardable - Whether the tab can be discarded automatically by the browser when resources are low
  * @property {boolean} incognito - Whether the tab is in an incognito window
  * @property {number} [openerTabId] - The ID of the tab that opened this tab, if any
  * @property {string} [pendingUrl] - The URL the tab is navigating to, before it has committed
@@ -21,23 +18,23 @@
 
 /**
  * @typedef {Object} ParsedDate
- * @property {string|null} year - The year as a string (e.g., "2024") or null if not available
- * @property {string|null} month - The month as a zero-padded string (e.g., "01", "12") or null if not available
- * @property {string|null} day - The day as a zero-padded string (e.g., "01", "31") or null if not available
+ * @property {string|null} year - The year as a string
+ * @property {string|null} month - The month as a zero-padded string
+ * @property {string|null} day - The day as a zero-padded string
  */
 
 /**
  * @typedef {Object} TabDateInfo
- * @property {number} tabId - The ID of the tab
- * @property {string} url - The URL of the tab
- * @property {string|null} title - The title of the tab, or null if not available
- * @property {string|null} dateString - The raw date string found on the page, or null if no date found
- * @property {ParsedDate|null} date - The parsed date object, or null if no date could be parsed
+ * @property {number} tabId
+ * @property {string} url
+ * @property {string|null} title
+ * @property {string|null} dateString - The raw date string found on the page
+ * @property {ParsedDate|null} date - The parsed date object
  */
 
 /**
  * Displays a temporary badge on the extension icon to indicate success or failure
- * @param {Object} options - Options for the badge
+ * @param {Object} options
  * @param {boolean} [options.success=true] - Whether the operation was successful
  * @credit https://github.com/chitsaou/copy-as-markdown
  */
@@ -154,7 +151,7 @@ async function sortSelectedTabsByUrl() {
 
 /**
  * Fetches date information for tabs using the heliotropium extension
- * @param {ChromeTab[]} tabs - Array of tabs to fetch dates for
+ * @param {ChromeTab[]} tabs
  * @returns {Promise<TabDateInfo[]>} Array of tab data objects with date information from heliotropium extension
  */
 async function fetchTabDates(tabs) {
