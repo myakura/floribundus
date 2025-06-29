@@ -1,5 +1,10 @@
+/**
+ * Displays a temporary badge on the extension icon to indicate success or failure
+ * @param {Object} options - Options for the badge
+ * @param {boolean} [options.success=true] - Whether the operation was successful
+ * @credit https://github.com/chitsaou/copy-as-markdown
+ */
 async function flashBadge({ success = true }) {
-	// credit: https://github.com/chitsaou/copy-as-markdown
 	const text = success ? '✔' : '✘';
 	const color = success ? 'hsl(135, 70%, 30%)' : 'hsl(0, 80%, 40%)';
 	const transparent = 'rgba(0, 0, 0, 0)';
@@ -19,6 +24,9 @@ async function flashBadge({ success = true }) {
 	}
 }
 
+/**
+ * Sets a working indicator badge showing "..." to indicate an operation in progress
+ */
 async function setWorkingBadge() {
 	try {
 		await chrome.action.setBadgeText({ text: '...' });
@@ -29,6 +37,10 @@ async function setWorkingBadge() {
 	}
 }
 
+/**
+ * Gets all currently selected/highlighted tabs in the current window
+ * @returns {Promise<chrome.tabs.Tab[]>} Array of selected tabs
+ */
 async function getSelectedTabs() {
 	try {
 		const tabs = await chrome.tabs.query({ currentWindow: true, highlighted: true });
@@ -45,6 +57,11 @@ async function getSelectedTabs() {
 	}
 }
 
+/**
+ * Moves tabs to new positions to match the sorted order
+ * @param {chrome.tabs.Tab[]} originalTabs - The original unsorted tabs
+ * @param {chrome.tabs.Tab[]} sortedTabs - The tabs in their new sorted order
+ */
 async function moveTabs(originalTabs, sortedTabs) {
 	// Align tabs to the right edge of the selected tabs
 	const rightmostIndex = Math.max(...originalTabs.map(tab => tab.index));
@@ -71,6 +88,9 @@ async function moveTabs(originalTabs, sortedTabs) {
 	}
 }
 
+/**
+ * Sorts the currently selected tabs alphabetically by URL
+ */
 async function sortSelectedTabsByUrl() {
 	try {
 		await setWorkingBadge();
@@ -95,6 +115,17 @@ async function sortSelectedTabsByUrl() {
 	}
 }
 
+/**
+ * Fetches date information for tabs using the heliotropium extension
+ * @param {chrome.tabs.Tab[]} tabs - Array of tabs to fetch dates for
+ * @returns {Promise<Array<{
+ *   tabId: number,
+ *   url: string,
+ *   title: string|null,
+ *   dateString: string|null,
+ *   date: {year: string|null, month: string|null, day: string|null}|null
+ * }>>} Array of tab data objects with date information from heliotropium extension
+ */
 async function fetchTabDates(tabs) {
 	const unloadedTabs = tabs.filter(tab => tab.discarded || tab.status !== 'complete');
 
@@ -197,6 +228,9 @@ async function fetchTabDates(tabs) {
 	}
 }
 
+/**
+ * Sorts the currently selected tabs by date using data from heliotropium extension
+ */
 async function sortSelectedTabsByDate() {
 	try {
 		await setWorkingBadge();
@@ -242,6 +276,10 @@ chrome.commands.onCommand.addListener(async (command) => {
 	}
 });
 
+/**
+ * Detects if the system is in dark mode
+ * @returns {boolean} True if dark mode is enabled, false otherwise
+ */
 function isDarkMode() {
 	if (typeof window === 'undefined' || !('matchMedia' in window)) {
 		return false;
@@ -249,6 +287,10 @@ function isDarkMode() {
 	return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
+/**
+ * Updates the extension icon based on dark mode and enables/disables the extension
+ * based on the number of selected tabs
+ */
 async function updateIcon() {
 	const icon = isDarkMode() ? 'icons/icon_white.png' : 'icons/icon_black.png';
 	try {
@@ -281,7 +323,10 @@ chrome.tabs.onHighlighted.addListener(async ({ tabIds }) => {
 	await updateIcon();
 });
 
-// top-level await is not supported in service workers
+/**
+ * Initializes the extension by calling updateIcon
+ * Note: top-level await is not supported in service workers
+ */
 function initialize() {
 	updateIcon().catch((error) => {
 		console.log('Error on initialization:', error);
