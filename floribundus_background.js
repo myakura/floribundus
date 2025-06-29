@@ -1,4 +1,25 @@
 /**
+ * @typedef {Object} ChromeTab
+ * @property {number} id - The ID of the tab. Tab IDs are unique within a browser session
+ * @property {number} index - The zero-based index of the tab within its window
+ * @property {number} windowId - The ID of the window the tab is contained within
+ * @property {string} [url] - The URL the tab is displaying. This property is only present if the extension's manifest includes the "tabs" permission
+ * @property {string} [title] - The title of the tab. This property is only present if the extension's manifest includes the "tabs" permission
+ * @property {string} [favIconUrl] - The URL of the tab's favicon. This property is only present if the extension's manifest includes the "tabs" permission
+ * @property {string} status - Either "loading" or "complete"
+ * @property {boolean} active - Whether the tab is active in its window (does not necessarily mean the window is focused)
+ * @property {boolean} highlighted - Whether the tab is highlighted
+ * @property {boolean} pinned - Whether the tab is pinned
+ * @property {boolean} audible - Whether the tab has produced sound over the past couple of seconds
+ * @property {boolean} discarded - Whether the tab is discarded. A discarded tab is one whose content has been unloaded from memory
+ * @property {boolean} autoDiscardable - Whether the tab can be discarded automatically by the browser when resources are low
+ * @property {boolean} incognito - Whether the tab is in an incognito window
+ * @property {number} [openerTabId] - The ID of the tab that opened this tab, if any
+ * @property {string} [pendingUrl] - The URL the tab is navigating to, before it has committed
+ * @property {number} [groupId] - The ID of the group that the tab belongs to
+ */
+
+/**
  * Displays a temporary badge on the extension icon to indicate success or failure
  * @param {Object} options - Options for the badge
  * @param {boolean} [options.success=true] - Whether the operation was successful
@@ -39,7 +60,7 @@ async function setWorkingBadge() {
 
 /**
  * Gets all currently selected/highlighted tabs in the current window
- * @returns {Promise<chrome.tabs.Tab[]>} Array of selected tabs
+ * @returns {Promise<ChromeTab[]>} Array of selected tabs
  */
 async function getSelectedTabs() {
 	try {
@@ -59,8 +80,8 @@ async function getSelectedTabs() {
 
 /**
  * Moves tabs to new positions to match the sorted order
- * @param {chrome.tabs.Tab[]} originalTabs - The original unsorted tabs
- * @param {chrome.tabs.Tab[]} sortedTabs - The tabs in their new sorted order
+ * @param {ChromeTab[]} originalTabs - The original unsorted tabs
+ * @param {ChromeTab[]} sortedTabs - The tabs in their new sorted order
  */
 async function moveTabs(originalTabs, sortedTabs) {
 	// Align tabs to the right edge of the selected tabs
@@ -117,7 +138,7 @@ async function sortSelectedTabsByUrl() {
 
 /**
  * Fetches date information for tabs using the heliotropium extension
- * @param {chrome.tabs.Tab[]} tabs - Array of tabs to fetch dates for
+ * @param {ChromeTab[]} tabs - Array of tabs to fetch dates for
  * @returns {Promise<Array<{
  *   tabId: number,
  *   url: string,
