@@ -51,7 +51,8 @@ async function getSelectedTabs() {
 		tabs.forEach((tab) => console.log(tab.id, tab.url, tab.title));
 		console.groupEnd();
 
-		return tabs;
+		// It's crucial to sort by index to have a predictable starting point
+		return tabs.toSorted((a, b) => a.index - b.index);
 	}
 	catch (error) {
 		console.error('Failed to get selected tabs:', error);
