@@ -127,19 +127,30 @@ async function fetchTabDates(tabs) {
 	const unloadedTabs = tabs.filter(tab => tab.discarded || tab.status !== 'complete');
 
 	if (unloadedTabs.length > 0) {
+		const RELOAD_TIMEOUT = 15000;
+
 		const reloadPromises = unloadedTabs.map(tab => {
-			return new Promise(resolve => {
-				const listener = (tabId, changeInfo) => {
-					if (tabId === tab.id && changeInfo.status === 'complete') {
-						chrome.tabs.onUpdated.removeListener(listener);
-						resolve();
-					}
-				};
-				chrome.tabs.onUpdated.addListener(listener);
-				chrome.tabs.reload(tab.id);
-			});
+			return Promise.race([
+				new Promise(resolve => {
+					const listener = (tabId, changeInfo) => {
+						if (tabId === tab.id && changeInfo.status === 'complete') {
+							chrome.tabs.onUpdated.removeListener(listener);
+							resolve({ status: 'reloaded', tabId: tab.id });
+						}
+					};
+					chrome.tabs.onUpdated.addListener(listener);
+					chrome.tabs.reload(tab.id);
+				}),
+				new Promise(resolve => {
+					setTimeout(() => {
+						resolve({ status: 'timeout', tabId: tab.id });
+					}, RELOAD_TIMEOUT);
+				})
+			]);
 		});
-		await Promise.all(reloadPromises);
+
+		const results = await Promise.all(reloadPromises);
+		console.log('Tab reload results:', results);
 	}
 
 	const tabIds = tabs.map((tab) => tab.id);
