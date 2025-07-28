@@ -99,9 +99,8 @@ async function sortSelectedTabsByUrl() {
 	try {
 		await setWorkingBadge();
 		const tabs = await getSelectedTabs();
-		if (!tabs || tabs.length === 0) {
-			console.log('No tabs found.');
-			await flashBadge({ success: false });
+		if (tabs.length < 2) {
+			await flashBadge({ success: true });
 			return;
 		}
 
@@ -110,11 +109,13 @@ async function sortSelectedTabsByUrl() {
 			const urlB = b.url || '';
 			return urlA.localeCompare(urlB);
 		});
+		const sortedTabIds = sortedTabs.map(tab => tab.id);
 
-		await moveTabs(tabs, sortedTabs);
+		await chrome.tabs.move(sortedTabIds, { index: tabs[0].index });
+		await flashBadge({ success: true });
 	}
 	catch (error) {
-		console.log(error);
+		console.error('Error sorting tabs by URL:', error);
 		await flashBadge({ success: false });
 	}
 }
