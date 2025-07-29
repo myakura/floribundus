@@ -115,7 +115,10 @@ async function sortSelectedTabsByUrl() {
 		});
 		const sortedTabIds = sortedTabs.map((tab) => tab.id);
 
-		await chrome.tabs.move(sortedTabIds, { index: tabs[0].index });
+		// Align tabs to the right edge of the selected tabs
+		const rightmostIndex = Math.max(...tabs.map(tab => tab.index));
+		const startIndex = rightmostIndex - sortedTabIds.length + 1;
+		await chrome.tabs.move(sortedTabIds, { index: startIndex });
 
 		console.group('Sorted!');
 		sortedTabs.forEach((tab) => console.log(tab.url));
