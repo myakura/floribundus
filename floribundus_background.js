@@ -61,38 +61,6 @@ async function getSelectedTabs() {
 }
 
 /**
- * Moves tabs to new positions to match the sorted order
- * @param {ChromeTab[]} originalTabs - The original unsorted tabs
- * @param {ChromeTab[]} sortedTabs - The tabs in their new sorted order
- */
-async function moveTabs(originalTabs, sortedTabs) {
-	// Align tabs to the right edge of the selected tabs
-	const rightmostIndex = Math.max(...originalTabs.map(tab => tab.index));
-	const startIndex = rightmostIndex - sortedTabs.length + 1;
-
-	console.group('Sorting tabs...');
-	originalTabs.forEach((tab) => console.log(tab.url));
-	console.groupEnd();
-
-	try {
-		// Move tabs sequentially from the back to avoid index shifting issues
-		for (let i = sortedTabs.length - 1; i >= 0; i--) {
-			await chrome.tabs.move(sortedTabs[i].id, { index: startIndex + i });
-		}
-
-		console.group('Sorted!');
-		sortedTabs.forEach((tab) => console.log(tab.url));
-		console.groupEnd();
-
-		await flashBadge({ success: true });
-	}
-	catch (error) {
-		console.error('Error moving tabs:', error);
-		await flashBadge({ success: false });
-	}
-}
-
-/**
  * Sorts the currently selected tabs alphabetically by URL
  */
 async function sortSelectedTabsByUrl() {
