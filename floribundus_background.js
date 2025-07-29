@@ -235,29 +235,53 @@ async function sortSelectedTabsByDate() {
 	try {
 		await setWorkingBadge();
 		const tabs = await getSelectedTabs();
-		const tabDataArray = await fetchTabDates(tabs);
+		if (tabs.length < 2) {
+			await flashBadge({ success: true });
+			return;
+		}
 
-		console.log('Sorting tabs by date...');
-		console.log('Tab data:', tabDataArray);
-		console.log('Current tab ids:', tabs.map(tab => tab.id));
+		console.group('Sorting tabs...');
+		tabs.forEach((tab) => console.log(tab.url));
+		console.groupEnd();
 
-		const dateMap = {};
-		tabDataArray.forEach(({ tabId, date }) => {
-			const { year = '', month = '', day = '' } = date || {};
-			dateMap[tabId] = `${year}-${month}-${day}`;
+		const tabDataMap = await fetchTabDates(tabs);
+
+		// Sort the original tabs array using the fetched date data
+		// This is the robust sorting logic
+		const sortedTabs = [...tabs].sort((a, b) => {
+			const tabAData = tabDataMap.get(a.id);
+			const tabBData = tabDataMap.get(b.id);
+			const dateA = getComparableDate(tabAData?.date);
+			const dateB = getComparableDate(tabBData?.date);
+
+			// Both have dates: sort chronologically
+			if (dateA && dateB) {
+				return dateA - dateB;
+			}
+
+			// Only A has a date: A comes first
+			if (dateA) return -1;
+			// Only B has a date: B comes first
+			if (dateB) return 1;
+			// Neither has a date: keep original relative order
+			return 0;
 		});
-		console.log('Date map:', dateMap);
 
-		const sortedTabs = tabs.toSorted((a, b) => {
-			const dateA = dateMap[a.id] || '';
-			const dateB = dateMap[b.id] || '';
-			return dateA.localeCompare(dateB);
-		});
+		const sortedTabIds = sortedTabs.map((tab) => tab.id);
 
-		await moveTabs(tabs, sortedTabs);
+		// Align tabs to the right edge of the selected tabs
+		const rightmostIndex = Math.max(...tabs.map(tab => tab.index));
+		const startIndex = rightmostIndex - sortedTabIds.length + 1;
+		await chrome.tabs.move(sortedTabIds, { index: startIndex });
+
+		console.group('Sorted!');
+		sortedTabs.forEach((tab) => console.log(tab.url));
+		console.groupEnd();
+
+		await flashBadge({ success: true });
 	}
 	catch (error) {
-		console.log(error);
+		console.error('Error sorting tabs by date:', error);
 		await flashBadge({ success: false });
 	}
 }
