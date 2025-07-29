@@ -135,17 +135,17 @@ async function sortSelectedTabsByUrl() {
 /**
  * Fetches date information for tabs using the heliotropium extension
  * @param {ChromeTab[]} tabs
- * @returns {Promise<TabDateInfo[]>} Array of tab data objects with date information from heliotropium extension
+ * @returns {Promise<Map<number, TabDateInfo>>} A map where keys are tab IDs and values are date info objects
  */
 async function fetchTabDates(tabs) {
-	const unloadedTabs = tabs.filter(tab => tab.discarded || tab.status !== 'complete');
+	const unloadedTabs = tabs.filter((tab) => tab.discarded || tab.status !== 'complete');
 
 	if (unloadedTabs.length > 0) {
 		const RELOAD_TIMEOUT = 15000;
 
-		const reloadPromises = unloadedTabs.map(tab => {
+		const reloadPromises = unloadedTabs.map((tab) => {
 			return Promise.race([
-				new Promise(resolve => {
+				new Promise((resolve) => {
 					const listener = (tabId, changeInfo) => {
 						if (tabId === tab.id && changeInfo.status === 'complete') {
 							chrome.tabs.onUpdated.removeListener(listener);
@@ -168,82 +168,51 @@ async function fetchTabDates(tabs) {
 	}
 
 	const tabIds = tabs.map((tab) => tab.id);
-
 	const manifest = chrome.runtime.getManifest();
-	const { FIREFOX_EXTENSION_ID, CHROME_EXTENSION_ID } = manifest.externals.heliotropium;
+	const heliotropiumConfig = manifest.externals?.heliotropium;
+
+	// Set a default map value as a fallback
+	const tabInfoMap = new Map(tabs.map((tab) => [tab.id, {
+		tabId: tab.id,
+		url: tab.url,
+		title: tab.title,
+		dateString: null,
+		date: null
+	}]));
+
+	if (!heliotropiumConfig) {
+		console.error("Heliotropium configuration is missing in manifest.json");
+		return tabInfoMap;
+	}
+
+	const { FIREFOX_EXTENSION_ID, CHROME_EXTENSION_ID } = heliotropiumConfig;
 	const extensionId = navigator.userAgent.includes('Firefox')
 		? FIREFOX_EXTENSION_ID
 		: CHROME_EXTENSION_ID;
 
-	const fallbackData = tabIds.map(tabId => {
-		const tab = tabs.find(t => t.id === tabId);
-		return {
-			tabId,
-			url: tab.url,
-			title: null,
-			dateString: null,
-			date: { year: null, month: null, day: null },
-		};
-	});
-
 	try {
-		console.log('Sending message to extension:', { action: 'get-dates', tabIds });
-
 		const response = await chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds });
 
-		console.log('Raw response from extension:', response);
-		console.log('Response type:', typeof response);
-
-		// Handle different response formats
-		let processedData;
-
-		if (!response) {
-			console.log('No response from extension');
-			await flashBadge({ success: false });
-			return fallbackData;
-		}
-		else if (response.error) {
-			console.log('Extension returned error:', response.error);
-			await flashBadge({ success: false });
-			return fallbackData;
-		}
-		else if (response.data && Array.isArray(response.data)) {
-			// Expected format: { data: [...] }
-			console.log('Using response.data array');
-			processedData = response.data;
-		}
-		else {
-			console.log('Unexpected response format:', response);
-			await flashBadge({ success: false });
-			return fallbackData;
+		if (!response || response.error || !Array.isArray(response.data)) {
+			console.log('No response, error, or invalid data from Heliotropium:', response?.error || response);
+			return tabInfoMap;
 		}
 
-		console.log('Processed data:', processedData);
-
-		const dataByTabId = {};
-		processedData.forEach(item => {
-			dataByTabId[item.tabId] = item;
-		});
-
-		const completeData = tabIds.map(tabId => {
-			if (dataByTabId[tabId]) {
-				return dataByTabId[tabId];
+		const dateMap = new Map(response.data.map((item) => [item.tabId, item]));
+		// Merge fetched data with fallback data to ensure all tabs are included.
+		for (const tab of tabs) {
+			if (dateMap.has(tab.id)) {
+				tabInfoMap.set(tab.id, dateMap.get(tab.id));
 			}
-			else {
-				const tab = tabs.find(t => t.id === tabId);
-				return {
-					tabId,
-					url: tab.url,
-					title: null,
-					dateString: null,
-					date: { year: null, month: null, day: null },
-				};
-			}
-		});
+		}
+		return tabInfoMap;
 
-		return completeData;
 	}
 	catch (error) {
+		console.log('Failed to fetch tab dates. Heliotropium might not be installed.', error);
+		return tabInfoMap;
+	}
+}
 
 /**
  * Creates a comparable Date object from a ParsedDate object
