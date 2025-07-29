@@ -334,10 +334,10 @@ chrome.tabs.onHighlighted.addListener(async ({ tabIds }) => {
 });
 
 /**
- * Initializes the extension by calling updateIcon
- * Note: top-level await is not supported in service workers
+ * Initializes the extension
  */
 function initialize() {
+	// Note: top-level await is not supported in service workers so this has to be a promise chain
 	updateIcon().catch((error) => {
 		console.log('Error on initialization:', error);
 	});
