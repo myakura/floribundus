@@ -109,7 +109,7 @@ async function sortSelectedTabsByUrl() {
 			const urlB = b.url || '';
 			return urlA.localeCompare(urlB);
 		});
-		const sortedTabIds = sortedTabs.map(tab => tab.id);
+		const sortedTabIds = sortedTabs.map((tab) => tab.id);
 
 		await chrome.tabs.move(sortedTabIds, { index: tabs[0].index });
 		await flashBadge({ success: true });
