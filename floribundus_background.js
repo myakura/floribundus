@@ -112,9 +112,11 @@ async function fetchTabDates(tabs) {
 		const RELOAD_TIMEOUT = 15000;
 
 		const reloadPromises = unloadedTabs.map((tab) => {
+			let listener; // Store listener reference outside Promise
+
 			return Promise.race([
 				new Promise((resolve) => {
-					const listener = (tabId, changeInfo) => {
+					listener = (tabId, changeInfo) => {
 						if (tabId === tab.id && changeInfo.status === 'complete') {
 							chrome.tabs.onUpdated.removeListener(listener);
 							resolve({ status: 'reloaded', tabId: tab.id });
@@ -128,7 +130,12 @@ async function fetchTabDates(tabs) {
 						resolve({ status: 'timeout', tabId: tab.id });
 					}, RELOAD_TIMEOUT);
 				})
-			]);
+			]).finally(() => {
+				// Clean up listener regardless of how Promise resolved
+				if (listener) {
+					chrome.tabs.onUpdated.removeListener(listener);
+				}
+			});
 		});
 
 		const results = await Promise.all(reloadPromises);
