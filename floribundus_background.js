@@ -241,10 +241,19 @@ async function fetchTabDates(tabs) {
 		return completeData;
 	}
 	catch (error) {
-		console.log('Failed to fetch tab dates:', error);
-		await flashBadge({ success: false });
-		return fallbackData;
+
+/**
+ * Creates a comparable Date object from a ParsedDate object
+ * Returns null if the date is invalid or incomplete
+ * @param {ParsedDate | null} dateObj
+ * @returns {Date | null}
+ */
+function getComparableDate(dateObj) {
+	if (!dateObj || dateObj.year == null || dateObj.month == null || dateObj.day == null) {
+		return null;
 	}
+	// Month is 0-indexed in JavaScript's Date object
+	return new Date(Date.UTC(dateObj.year, dateObj.month - 1, dateObj.day));
 }
 
 /**
