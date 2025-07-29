@@ -262,8 +262,25 @@ async function sortSelectedTabsByDate() {
 }
 
 chrome.action.onClicked.addListener(async () => {
-	// fixme: use `sortSelectedTabsByUrl()` by default. change to `sortSelectedTabsByDate()` if heliotropium is installed
-	await sortSelectedTabsByDate();
+	await setWorkingBadge();
+	const tabs = await getSelectedTabs();
+	if (tabs.length < 2) {
+		await flashBadge({ success: true });
+		return;
+	}
+
+	try {
+		// Attempt to get date from Heliotropium
+		await fetchTabDates([tabs[0]]);
+
+		// If successful, sort by date
+		await sortSelectedTabsByDate();
+	}
+	catch (error) {
+		// If fetchTabDates fails, it will throw
+		// Fallback to sorting by URL
+		await sortSelectedTabsByUrl();
+	}
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
