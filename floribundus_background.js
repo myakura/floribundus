@@ -291,10 +291,10 @@ chrome.commands.onCommand.addListener(async (command) => {
  * @returns {boolean} True if dark mode is enabled, false otherwise
  */
 function isDarkMode() {
-	if (typeof window === 'undefined' || !('matchMedia' in window)) {
-		return false;
+	if (typeof window !== 'undefined' && 'matchMedia' in window) {
+		return window.matchMedia('(prefers-color-scheme: dark)').matches;
 	}
-	return window.matchMedia('(prefers-color-scheme: dark)').matches;
+	return false;
 }
 
 /**
