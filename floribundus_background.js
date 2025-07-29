@@ -104,6 +104,10 @@ async function sortSelectedTabsByUrl() {
 			return;
 		}
 
+		console.group('Sorting tabs...');
+		tabs.forEach((tab) => console.log(tab.url));
+		console.groupEnd();
+
 		const sortedTabs = tabs.toSorted((a, b) => {
 			const urlA = a.url || '';
 			const urlB = b.url || '';
@@ -112,6 +116,11 @@ async function sortSelectedTabsByUrl() {
 		const sortedTabIds = sortedTabs.map((tab) => tab.id);
 
 		await chrome.tabs.move(sortedTabIds, { index: tabs[0].index });
+
+		console.group('Sorted!');
+		sortedTabs.forEach((tab) => console.log(tab.url));
+		console.groupEnd();
+
 		await flashBadge({ success: true });
 	}
 	catch (error) {
