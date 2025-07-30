@@ -196,11 +196,12 @@ async function fetchTabDates(tabs) {
  * @returns {Date | null}
  */
 function getComparableDate(dateObj) {
-	if (!dateObj || dateObj.year == null || dateObj.month == null || dateObj.day == null) {
+	// Only a year is strictly required. Month and day can default to 1.
+	if (!dateObj || dateObj.year == null) {
 		return null;
 	}
-	// Month is 0-indexed in JavaScript's Date object
-	return new Date(Date.UTC(dateObj.year, dateObj.month - 1, dateObj.day));
+	// Month is 0-indexed, so we default to month 1 (January) and day 1.
+	return new Date(Date.UTC(dateObj.year, (dateObj.month || 1) - 1, dateObj.day || 1));
 }
 
 /**
