@@ -265,8 +265,8 @@ chrome.action.onClicked.addListener(async () => {
 		await sortSelectedTabsByDate(tabs, tabDataMap);
 	}
 	catch (error) {
-		// If fetchTabDates fails, it will throw
-		// Fallback to sorting by URL
+		// If fetchTabDates fails, it will throw. Fallback to sorting by URL
+		console.log('Looks like Heliotropium is not installed. Falling back to URL sorting.', error);
 		await sortSelectedTabsByUrl(tabs);
 	}
 });
@@ -284,8 +284,16 @@ chrome.commands.onCommand.addListener(async (command) => {
 		await sortSelectedTabsByUrl(tabs);
 	}
 	if (command === 'sort-tabs-by-date') {
-		const tabDataMap = await fetchTabDates(tabs);
-		await sortSelectedTabsByDate(tabs, tabDataMap);
+		try {
+			// Attempt to get date from Heliotropium
+			const tabDataMap = await fetchTabDates(tabs);
+			await sortSelectedTabsByDate(tabs, tabDataMap);
+		}
+		catch (error) {
+			// If fetchTabDates fails, it will throw
+			console.error('Looks like Heliotropium is not installed.', error);
+			await flashBadge({ success: false });
+		}
 	}
 });
 
