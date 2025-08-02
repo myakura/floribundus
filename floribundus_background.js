@@ -202,35 +202,25 @@ function getComparableDate(dateObj) {
 
 /**
  * Sorts the currently selected tabs by date using data from heliotropium extension
+ * @param {ChromeTab[]} tabs
+ * @param {Map<number, TabDateInfo>} tabDataMap - Map of tab IDs to their date information
  */
-async function sortSelectedTabsByDate() {
+async function sortSelectedTabsByDate(tabs, tabDataMap) {
 	try {
 		await setWorkingBadge();
-		const tabs = await getSelectedTabs();
-		if (tabs.length < 2) {
-			await flashBadge({ success: true });
-			return;
-		}
 
 		console.group('Sorting tabs...');
 		tabs.forEach((tab) => console.log(tab.url));
 		console.groupEnd();
 
-		const tabDataMap = await fetchTabDates(tabs);
-
 		// Sort the original tabs array using the fetched date data
 		// This is the robust sorting logic
 		const sortedTabs = [...tabs].sort((a, b) => {
-			const tabAData = tabDataMap.get(a.id);
-			const tabBData = tabDataMap.get(b.id);
-			const dateA = getComparableDate(tabAData?.date);
-			const dateB = getComparableDate(tabBData?.date);
+			const dateA = getComparableDate(tabDataMap.get(a.id)?.date);
+			const dateB = getComparableDate(tabDataMap.get(b.id)?.date);
 
 			// Both have dates: sort chronologically
-			if (dateA && dateB) {
-				return dateA - dateB;
-			}
-
+			if (dateA && dateB) return dateA - dateB;
 			// Only A has a date: A comes first
 			if (dateA) return -1;
 			// Only B has a date: B comes first
@@ -269,10 +259,10 @@ chrome.action.onClicked.addListener(async () => {
 
 	try {
 		// Attempt to get date from Heliotropium
-		await fetchTabDates([tabs[0]]);
+		const tabDataMap = await fetchTabDates(tabs);
 
 		// If successful, sort by date
-		await sortSelectedTabsByDate();
+		await sortSelectedTabsByDate(tabs, tabDataMap);
 	}
 	catch (error) {
 		// If fetchTabDates fails, it will throw
@@ -294,7 +284,8 @@ chrome.commands.onCommand.addListener(async (command) => {
 		await sortSelectedTabsByUrl(tabs);
 	}
 	if (command === 'sort-tabs-by-date') {
-		await sortSelectedTabsByDate();
+		const tabDataMap = await fetchTabDates(tabs);
+		await sortSelectedTabsByDate(tabs, tabDataMap);
 	}
 });
 
