@@ -210,7 +210,10 @@ async function sortSelectedTabsByDate(tabs, tabDataMap) {
 		await setWorkingBadge();
 
 		console.group('Sorting tabs...');
-		tabs.forEach((tab) => console.log(tab.url));
+		tabs.forEach((tab) => {
+			const tabData = tabDataMap.get(tab.id);
+			console.log(tab.url, tabData?.dateString || 'No date');
+		});
 		console.groupEnd();
 
 		// Sort the original tabs array using the fetched date data
@@ -237,7 +240,10 @@ async function sortSelectedTabsByDate(tabs, tabDataMap) {
 		await chrome.tabs.move(sortedTabIds, { index: startIndex });
 
 		console.group('Sorted!');
-		sortedTabs.forEach((tab) => console.log(tab.url));
+		sortedTabs.forEach((tab) => {
+			const tabData = tabDataMap.get(tab.id);
+			console.log(tab.url, tabData?.dateString || 'No date');
+		});
 		console.groupEnd();
 
 		await flashBadge({ success: true });
