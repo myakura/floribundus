@@ -62,15 +62,11 @@ async function getSelectedTabs() {
 
 /**
  * Sorts the currently selected tabs alphabetically by URL
+ * @param {ChromeTab[]} tabs
  */
-async function sortSelectedTabsByUrl() {
+async function sortSelectedTabsByUrl(tabs) {
 	try {
 		await setWorkingBadge();
-		const tabs = await getSelectedTabs();
-		if (tabs.length < 2) {
-			await flashBadge({ success: true });
-			return;
-		}
 
 		console.group('Sorting tabs...');
 		tabs.forEach((tab) => console.log(tab.url));
@@ -264,6 +260,7 @@ async function sortSelectedTabsByDate() {
 
 chrome.action.onClicked.addListener(async () => {
 	await setWorkingBadge();
+
 	const tabs = await getSelectedTabs();
 	if (tabs.length < 2) {
 		await flashBadge({ success: true });
@@ -280,13 +277,21 @@ chrome.action.onClicked.addListener(async () => {
 	catch (error) {
 		// If fetchTabDates fails, it will throw
 		// Fallback to sorting by URL
-		await sortSelectedTabsByUrl();
+		await sortSelectedTabsByUrl(tabs);
 	}
 });
 
 chrome.commands.onCommand.addListener(async (command) => {
+	await setWorkingBadge();
+
+	const tabs = await getSelectedTabs();
+	if (tabs.length < 2) {
+		await flashBadge({ success: true });
+		return;
+	}
+
 	if (command === 'sort-tabs-by-url') {
-		await sortSelectedTabsByUrl();
+		await sortSelectedTabsByUrl(tabs);
 	}
 	if (command === 'sort-tabs-by-date') {
 		await sortSelectedTabsByDate();
