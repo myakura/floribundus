@@ -215,7 +215,7 @@ async function sortSelectedTabsByDate(tabs, tabDataMap) {
 
 		// Sort the original tabs array using the fetched date data
 		// This is the robust sorting logic
-		const sortedTabs = [...tabs].sort((a, b) => {
+		const sortedTabs = tabs.toSorted((a, b) => {
 			const dateA = getComparableDate(tabDataMap.get(a.id)?.date);
 			const dateB = getComparableDate(tabDataMap.get(b.id)?.date);
 
