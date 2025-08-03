@@ -1,10 +1,15 @@
+/**
+ * @file background script for sorting selected tabs by date or URL
+ * @author Masataka Yakura
+ */
+
 /// <reference path="./types.js" />
 
 /**
  * Displays a temporary badge on the extension icon to indicate success or failure
  * @param {Object} options
  * @param {boolean} [options.success=true] - Whether the operation was successful
- * @credit https://github.com/chitsaou/copy-as-markdown
+ * @see credit: {@link https://github.com/chitsaou/copy-as-markdown}
  */
 async function flashBadge({ success = true }) {
 	const text = success ? '✔' : '✘';
@@ -97,9 +102,10 @@ async function sortSelectedTabsByUrl(tabs) {
 }
 
 /**
- * Fetches date information for tabs using the heliotropium extension
+ * Fetches date information for tabs using Heliotropium extension
  * @param {ChromeTab[]} tabs
  * @returns {Promise<Map<number, TabDateInfo>>} A map where keys are tab IDs and values are date info objects
+ * @see for Heliotropium see: {@link https://github.com/myakura/heliotropium}
  */
 async function fetchTabDates(tabs) {
 	const unloadedTabs = tabs.filter((tab) => tab.discarded || tab.status !== 'complete');
@@ -254,6 +260,9 @@ async function sortSelectedTabsByDate(tabs, tabDataMap) {
 	}
 }
 
+/**
+ * Event listener for extension icon click
+ */
 chrome.action.onClicked.addListener(async () => {
 	await setWorkingBadge();
 
@@ -277,6 +286,9 @@ chrome.action.onClicked.addListener(async () => {
 	}
 });
 
+/**
+ * Event listener for keyboard commands
+ */
 chrome.commands.onCommand.addListener(async (command) => {
 	await setWorkingBadge();
 
@@ -308,6 +320,7 @@ chrome.commands.onCommand.addListener(async (command) => {
  * @returns {boolean} True if dark mode is enabled, false otherwise
  */
 function isDarkMode() {
+	// Note: this works only on non-service-worker contexts since its dependance on `window.matchMedia`. This is intentional as there's not really cross-browser way to detect light/dark mode for icon updates.
 	if (typeof window !== 'undefined' && 'matchMedia' in window) {
 		return window.matchMedia('(prefers-color-scheme: dark)').matches;
 	}
@@ -315,8 +328,8 @@ function isDarkMode() {
 }
 
 /**
- * Updates the extension icon based on dark mode and enables/disables the extension
- * based on the number of selected tabs
+ * Updates the extension icon based on dark mode and enables/disables the extension based on the number of selected tabs
+ * @todo switch to use `icon_variants` once it's widely supported
  */
 async function updateIcon() {
 	const icon = isDarkMode() ? 'icons/icon_white.png' : 'icons/icon_black.png';
@@ -335,6 +348,8 @@ async function updateIcon() {
 		console.log(error);
 	}
 }
+
+// Icon updates
 
 chrome.windows.onFocusChanged.addListener(async () => {
 	await updateIcon();
