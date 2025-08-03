@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Floribundus",
-	"version": "0.10.0",
+	"version": "0.10.1",
 	"description": "Sort tabs. Either by URL or by date (requires the other extension).",
 	"icons": {
 		"48": "icons/icon_gray.png",
@@ -17,15 +17,9 @@
 	},
 	"commands": {
 		"sort-tabs-by-url": {
-			"suggested_key": {
-				"default": "Alt+Shift+U"
-			},
 			"description": "Sort tabs by URL"
 		},
 		"sort-tabs-by-date": {
-			"suggested_key": {
-				"default": "Alt+Shift+D"
-			},
 			"description": "Sort tabs by date"
 		}
 	},
