@@ -85,7 +85,7 @@ async function sortSelectedTabsByUrl(tabs) {
 		const sortedTabIds = sortedTabs.map((tab) => tab.id);
 
 		// Align tabs to the right edge of the selected tabs
-		const rightmostIndex = Math.max(...tabs.map(tab => tab.index));
+		const rightmostIndex = Math.max(...tabs.map((tab) => tab.index));
 		const startIndex = rightmostIndex - sortedTabIds.length + 1;
 		await chrome.tabs.move(sortedTabIds, { index: startIndex });
 
@@ -241,7 +241,7 @@ async function sortSelectedTabsByDate(tabs, tabDataMap) {
 		const sortedTabIds = sortedTabs.map((tab) => tab.id);
 
 		// Align tabs to the right edge of the selected tabs
-		const rightmostIndex = Math.max(...tabs.map(tab => tab.index));
+		const rightmostIndex = Math.max(...tabs.map((tab) => tab.index));
 		const startIndex = rightmostIndex - sortedTabIds.length + 1;
 		await chrome.tabs.move(sortedTabIds, { index: startIndex });
 
