@@ -2,8 +2,16 @@
  * @file background script for sorting selected tabs by date or URL
  * @author Masataka Yakura
  */
+/**
+ * @file background script for grouping selected tabs
+ * @author Masataka Yakura
+ */
 
 /// <reference path="./types.js" />
+
+
+// Shared utility functions for updating UI
+
 
 /**
  * Displays a temporary badge on the extension icon to indicate success or failure
@@ -31,6 +39,7 @@ async function flashBadge({ success = true }) {
 	}
 }
 
+
 /**
  * Sets a working indicator badge showing "..." to indicate an operation in progress
  */
@@ -43,6 +52,10 @@ async function setWorkingBadge() {
 		console.error('Failed to set working badge:', error);
 	}
 }
+
+
+// Utility functions
+
 
 /**
  * Gets all currently selected/highlighted tabs in the current window
@@ -65,41 +78,9 @@ async function getSelectedTabs() {
 	}
 }
 
-/**
- * Sorts the currently selected tabs alphabetically by URL
- * @param {ChromeTab[]} tabs
- */
-async function sortSelectedTabsByUrl(tabs) {
-	try {
-		await setWorkingBadge();
 
-		console.group('Sorting tabs...');
-		tabs.forEach((tab) => console.log(tab.url));
-		console.groupEnd();
+// Function to communicate with Heliotropium extension
 
-		const sortedTabs = tabs.toSorted((a, b) => {
-			const urlA = a.url || '';
-			const urlB = b.url || '';
-			return urlA.localeCompare(urlB);
-		});
-		const sortedTabIds = sortedTabs.map((tab) => tab.id);
-
-		// Align tabs to the right edge of the selected tabs
-		const rightmostIndex = Math.max(...tabs.map((tab) => tab.index));
-		const startIndex = rightmostIndex - sortedTabIds.length + 1;
-		await chrome.tabs.move(sortedTabIds, { index: startIndex });
-
-		console.group('Sorted!');
-		sortedTabs.forEach((tab) => console.log(tab.url));
-		console.groupEnd();
-
-		await flashBadge({ success: true });
-	}
-	catch (error) {
-		console.error('Error sorting tabs by URL:', error);
-		await flashBadge({ success: false });
-	}
-}
 
 /**
  * Fetches date information for tabs using Heliotropium extension
@@ -191,6 +172,10 @@ async function fetchTabDates(tabs) {
 	}
 }
 
+
+// Utility functions for date parsing and sorting
+
+
 /**
  * Creates a comparable Date object from a ParsedDate object
  * Returns null if the date is invalid or incomplete
@@ -206,114 +191,49 @@ function getComparableDate(dateObj) {
 	return new Date(Date.UTC(dateObj.year, (dateObj.month || 1) - 1, dateObj.day || 1));
 }
 
+
 /**
- * Sorts the currently selected tabs by date using data from heliotropium extension
+ * A robust, shared function to sort tabs by date.
  * @param {ChromeTab[]} tabs
- * @param {Map<number, TabDateInfo>} tabDataMap - Map of tab IDs to their date information
+ * @param {Map<number, TabDateInfo>} tabDataMap - The map of tabIDs to date info.
+ * @param {'end' | 'start' | 'preserve'} undatedPlacement - How to handle tabs without a date.
+ * - 'start': Move all undated tabs to the beginning.
+ * - 'end': Move all undated tabs to the end.
+ * - 'preserve': Keep the original relative order of undated tabs.
+ * @returns {ChromeTab[]} A new, sorted array of tabs.
  */
-async function sortSelectedTabsByDate(tabs, tabDataMap) {
-	try {
-		await setWorkingBadge();
+function sortTabsByDate(tabs, tabDataMap, undatedPlacement = 'end') {
+	console.log('Sorting tabs by date...');
+	console.log('Tab data map:', tabDataMap);
+	console.log('Current tab ids:', tabs.map((tab) => tab.id));
 
-		console.group('Sorting tabs...');
-		tabs.forEach((tab) => {
-			const tabData = tabDataMap.get(tab.id);
-			console.log(tab.url, tabData?.dateString || 'No date');
-		});
-		console.groupEnd();
+	const sortedTabs = tabs.toSorted((a, b) => {
+		const dateA = getComparableDate(tabDataMap.get(a.id)?.date);
+		const dateB = getComparableDate(tabDataMap.get(b.id)?.date);
 
-		// Sort the original tabs array using the fetched date data
-		// This is the robust sorting logic
-		const sortedTabs = tabs.toSorted((a, b) => {
-			const dateA = getComparableDate(tabDataMap.get(a.id)?.date);
-			const dateB = getComparableDate(tabDataMap.get(b.id)?.date);
+		// Both have dates: sort chronologically
+		if (dateA && dateB) { return dateA - dateB; }
 
-			// Both have dates: sort chronologically
-			if (dateA && dateB) return dateA - dateB;
-			// Only A has a date: A comes first
-			if (dateA) return -1;
-			// Only B has a date: B comes first
-			if (dateB) return 1;
-			// Neither has a date: keep original relative order
-			return 0;
-		});
+		// Neither has a date: preserve original relative order
+		if (!dateA && !dateB) { return 0; }
 
-		const sortedTabIds = sortedTabs.map((tab) => tab.id);
+		// One is undated
+		if (!dateA) { return undatedPlacement === 'start' ? -1 : 1; }
+		if (!dateB) { return undatedPlacement === 'start' ? 1 : -1; }
 
-		// Align tabs to the right edge of the selected tabs
-		const rightmostIndex = Math.max(...tabs.map((tab) => tab.index));
-		const startIndex = rightmostIndex - sortedTabIds.length + 1;
-		await chrome.tabs.move(sortedTabIds, { index: startIndex });
+		// If we reach here, both are either dated or undated
+		if (undatedPlacement === 'preserve') {
+			if (dateA) return -1; // Only A has a date, A comes first
+			if (dateB) return 1;  // Only B has a date, B comes first
+		}
 
-		console.group('Sorted!');
-		sortedTabs.forEach((tab) => {
-			const tabData = tabDataMap.get(tab.id);
-			console.log(tab.url, tabData?.dateString || 'No date');
-		});
-		console.groupEnd();
+		return 0;
+	});
 
-		await flashBadge({ success: true });
-	}
-	catch (error) {
-		console.error('Error sorting tabs by date:', error);
-		await flashBadge({ success: false });
-	}
+	console.log('Sorted tab ids:', sortedTabs.map((tab) => tab.id));
+	return sortedTabs;
 }
 
-/**
- * Event listener for extension icon click
- */
-chrome.action.onClicked.addListener(async () => {
-	await setWorkingBadge();
-
-	const tabs = await getSelectedTabs();
-	if (tabs.length < 2) {
-		await flashBadge({ success: true });
-		return;
-	}
-
-	try {
-		// Attempt to get date from Heliotropium
-		const tabDataMap = await fetchTabDates(tabs);
-
-		// If successful, sort by date
-		await sortSelectedTabsByDate(tabs, tabDataMap);
-	}
-	catch (error) {
-		// If fetchTabDates fails, it will throw. Fallback to sorting by URL
-		console.log('Looks like Heliotropium is not installed. Falling back to URL sorting.', error);
-		await sortSelectedTabsByUrl(tabs);
-	}
-});
-
-/**
- * Event listener for keyboard commands
- */
-chrome.commands.onCommand.addListener(async (command) => {
-	await setWorkingBadge();
-
-	const tabs = await getSelectedTabs();
-	if (tabs.length < 2) {
-		await flashBadge({ success: true });
-		return;
-	}
-
-	if (command === 'sort-tabs-by-url') {
-		await sortSelectedTabsByUrl(tabs);
-	}
-	if (command === 'sort-tabs-by-date') {
-		try {
-			// Attempt to get date from Heliotropium
-			const tabDataMap = await fetchTabDates(tabs);
-			await sortSelectedTabsByDate(tabs, tabDataMap);
-		}
-		catch (error) {
-			// If fetchTabDates fails, it will throw
-			console.error('Looks like Heliotropium is not installed.', error);
-			await flashBadge({ success: false });
-		}
-	}
-});
 
 /**
  * Detects if the system is in dark mode
@@ -326,6 +246,7 @@ function isDarkMode() {
 	}
 	return false;
 }
+
 
 /**
  * Updates the extension icon based on dark mode and enables/disables the extension based on the number of selected tabs
@@ -349,30 +270,137 @@ async function updateIcon() {
 	}
 }
 
-// Icon updates
-
-chrome.windows.onFocusChanged.addListener(async () => {
-	await updateIcon();
-});
-
-chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-	console.log('Tab activated:', tabId);
-	await updateIcon();
-});
-
-chrome.tabs.onHighlighted.addListener(async ({ tabIds }) => {
-	console.log('Tab highlighted:', tabIds);
-	await updateIcon();
-});
 
 /**
  * Initializes the extension
  */
 function initialize() {
-	// Note: top-level await is not supported in service workers so this has to be a promise chain
+	// Note: top-level await is not supported in service workers so this function cannot be an async function, thus being a promise chain
 	updateIcon().catch((error) => {
 		console.log('Error on initialization:', error);
 	});
+
+	// Icon updates
+	chrome.windows.onFocusChanged.addListener(async () => {
+		await updateIcon();
+	});
+	chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+		console.log('Tab activated:', tabId);
+		await updateIcon();
+	});
+	chrome.tabs.onHighlighted.addListener(async ({ tabIds }) => {
+		console.log('Tab highlighted:', tabIds);
+		await updateIcon();
+	});
 }
+
+
+// Tab sorting functions
+
+
+/**
+ * Sorts selected tabs by URL and moves them to maintain their relative position
+ * @param {ChromeTab[]} tabs - Array of tabs to sort by URL
+ * @returns {Promise<void>}
+ */
+async function sortAndMoveTabsByUrl(tabs) {
+	await setWorkingBadge();
+	try {
+		const sortedTabs = tabs.toSorted((a, b) => (a.url || '').localeCompare(b.url || ''));
+		const sortedTabIds = sortedTabs.map((tab) => tab.id);
+
+		const rightmostIndex = Math.max(...tabs.map((tab) => tab.index));
+		const startIndex = rightmostIndex - sortedTabIds.length + 1;
+		await chrome.tabs.move(sortedTabIds, { index: startIndex });
+
+		await flashBadge({ success: true });
+	} catch (error) {
+		console.error('Error sorting tabs by URL:', error);
+		await flashBadge({ success: false });
+	}
+}
+
+
+/**
+ * Sorts selected tabs by date using Heliotropium data and moves them to maintain their relative position
+ * @param {ChromeTab[]} tabs - Array of tabs to sort by date
+ * @param {Map<number, TabDateInfo>} tabDataMap - Map of tab IDs to their date information
+ * @returns {Promise<void>}
+ */
+async function sortAndMoveTabsByDate(tabs, tabDataMap) {
+	await setWorkingBadge();
+	try {
+		// Use the shared sorter, preserving undated tab order relative to each other
+		const sortedTabs = sortTabsByDate(tabs, tabDataMap, 'preserve');
+		const sortedTabIds = sortedTabs.map((tab) => tab.id);
+
+		const rightmostIndex = Math.max(...tabs.map((tab) => tab.index));
+		const startIndex = rightmostIndex - sortedTabIds.length + 1;
+		await chrome.tabs.move(sortedTabIds, { index: startIndex });
+
+		await flashBadge({ success: true });
+	} catch (error) {
+		console.error('Error sorting tabs by date:', error);
+		await flashBadge({ success: false });
+	}
+}
+
+
+/**
+ * Main sorting action triggered by extension icon click
+ * Attempts to sort by date first, falls back to URL sorting if Heliotropium is unavailable
+ * @returns {Promise<void>}
+ */
+async function mainSortAction() {
+	await setWorkingBadge();
+	const tabs = await getSelectedTabs();
+	if (tabs.length < 2) {
+		await flashBadge({ success: true });
+		return;
+	}
+
+	try {
+		const tabDataMap = await fetchTabDates(tabs);
+		await sortAndMoveTabsByDate(tabs, tabDataMap);
+	} catch (error) {
+		console.warn('Heliotropium fetch failed. Falling back to URL sort.', error);
+		await sortAndMoveTabsByUrl(tabs);
+	}
+}
+
+
+/**
+ * Event listener for extension icon click
+ */
+chrome.action.onClicked.addListener(mainSortAction);
+
+
+/**
+ * Event listener for keyboard commands
+ */
+chrome.commands.onCommand.addListener(async (command) => {
+	const tabs = await getSelectedTabs();
+	if (tabs.length < 2) {
+		await flashBadge({ success: true });
+		return;
+	}
+
+	if (command === 'sort-tabs-by-url') {
+		await sortAndMoveTabsByUrl(tabs);
+	}
+	else if (command === 'sort-tabs-by-date') {
+		try {
+			const tabDataMap = await fetchTabDates(tabs);
+			await sortAndMoveTabsByDate(tabs, tabDataMap);
+		}
+		catch (error) {
+			console.error('Heliotropium is required for date sorting.', error);
+			await flashBadge({ success: false });
+		}
+	}
+});
+
+
+// Initialize the extension
 
 initialize();
