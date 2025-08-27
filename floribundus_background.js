@@ -79,54 +79,56 @@ async function getSelectedTabs() {
 
 
 /**
- * Fetches date information for tabs using Heliotropium extension and tab group titles
- * @param {ChromeTab[]} tabs
- * @returns {Promise<Map<number, TabDateInfo>>} Map for tab dates including group information
- * @see for Heliotropium see: {@link https://github.com/myakura/heliotropium}
+ * Reloads unloaded tabs and waits for them to complete loading
+ * @param {ChromeTab[]} tabs - Array of tabs to check and reload if needed
+ * @returns {Promise<void>}
  */
-async function fetchTabDates(tabs) {
+async function reloadUnloadedTabs(tabs) {
 	const unloadedTabs = tabs.filter((tab) => tab.discarded || tab.status !== 'complete');
 
-	if (unloadedTabs.length > 0) {
-		const RELOAD_TIMEOUT = 15000;
+	if (unloadedTabs.length === 0) return;
 
-		const reloadPromises = unloadedTabs.map((tab) => {
-			let listener; // Store listener reference outside Promise
+	const RELOAD_TIMEOUT = 15000;
 
-			return Promise.race([
-				new Promise((resolve) => {
-					listener = (tabId, changeInfo) => {
-						if (tabId === tab.id && changeInfo.status === 'complete') {
-							chrome.tabs.onUpdated.removeListener(listener);
-							resolve({ status: 'reloaded', tabId: tab.id });
-						}
-					};
-					chrome.tabs.onUpdated.addListener(listener);
-					chrome.tabs.reload(tab.id);
-				}),
-				new Promise((resolve) => {
-					setTimeout(() => {
-						resolve({ status: 'timeout', tabId: tab.id });
-					}, RELOAD_TIMEOUT);
-				})
-			]).finally(() => {
-				// Clean up listener regardless of how Promise resolved
-				if (listener) {
-					chrome.tabs.onUpdated.removeListener(listener);
-				}
-			});
+	const reloadPromises = unloadedTabs.map((tab) => {
+		let listener; // Store listener reference outside Promise
+
+		return Promise.race([
+			new Promise((resolve) => {
+				listener = (tabId, changeInfo) => {
+					if (tabId === tab.id && changeInfo.status === 'complete') {
+						chrome.tabs.onUpdated.removeListener(listener);
+						resolve({ status: 'reloaded', tabId: tab.id });
+					}
+				};
+				chrome.tabs.onUpdated.addListener(listener);
+				chrome.tabs.reload(tab.id);
+			}),
+			new Promise((resolve) => {
+				setTimeout(() => {
+					resolve({ status: 'timeout', tabId: tab.id });
+				}, RELOAD_TIMEOUT);
+			})
+		]).finally(() => {
+			// Clean up listener regardless of how Promise resolved
+			if (listener) {
+				chrome.tabs.onUpdated.removeListener(listener);
+			}
 		});
+	});
 
-		const results = await Promise.all(reloadPromises);
-		console.log('Tab reload results:', results);
-	}
+	const results = await Promise.all(reloadPromises);
+	console.log('Tab reload results:', results);
+}
 
-	const tabIds = tabs.map((tab) => tab.id);
-	const manifest = chrome.runtime.getManifest();
-	const heliotropiumConfig = manifest.externals?.heliotropium;
 
-	// Set a default map value as a fallback
-	const tabInfoMap = new Map(tabs.map((tab) => [tab.id, {
+/**
+ * Creates initial tab info map with default values
+ * @param {ChromeTab[]} tabs - Array of tabs
+ * @returns {Map<number, TabDateInfo>} Map of tab IDs to initial tab info
+ */
+function createTabInfoMap(tabs) {
+	return new Map(tabs.map((tab) => [tab.id, {
 		tabId: tab.id,
 		url: tab.url,
 		title: tab.title,
@@ -135,65 +137,96 @@ async function fetchTabDates(tabs) {
 		groupId: null,
 		groupDate: null
 	}]));
+}
 
-	// Fetch tab group information and add group dates to tab info
+
+/**
+ * Fetches tab group information and adds group dates to tab info map
+ * @param {ChromeTab[]} tabs - Array of tabs
+ * @param {Map<number, TabDateInfo>} tabInfoMap - Tab info map to update
+ * @returns {Promise<void>}
+ */
+async function fetchTabGroupDates(tabs, tabInfoMap) {
 	const groupIds = [...new Set(tabs.map((tab) => tab.groupId).filter((id) => id !== chrome.tabGroups.TAB_GROUP_ID_NONE))];
 
-	if (groupIds.length > 0) {
-		try {
-			const groups = await Promise.all(groupIds.map((id) => chrome.tabGroups.get(id)));
-			const groupDateMap = new Map();
+	if (groupIds.length === 0) return;
 
-			for (const group of groups) {
-				const groupDate = extractDate(group.title);
-				groupDateMap.set(group.id, groupDate);
-			}
+	try {
+		const groups = await Promise.all(groupIds.map((id) => chrome.tabGroups.get(id)));
+		const groupDateMap = new Map();
 
-			// Add group dates to tab info
-			for (const [tabId, tabInfo] of tabInfoMap) {
-				if (tabInfo.groupId && groupDateMap.has(tabInfo.groupId)) {
-					tabInfo.groupDate = groupDateMap.get(tabInfo.groupId);
-				}
+		for (const group of groups) {
+			const groupDate = extractDate(group.title);
+			groupDateMap.set(group.id, groupDate);
+		}
+
+		// Add group dates to tab info
+		for (const [tabId, tabInfo] of tabInfoMap) {
+			if (tabInfo.groupId && groupDateMap.has(tabInfo.groupId)) {
+				tabInfo.groupDate = groupDateMap.get(tabInfo.groupId);
 			}
 		}
-		catch (error) {
-			console.error('Failed to fetch tab group information:', error);
-		}
+	} catch (error) {
+		console.error('Failed to fetch tab group information:', error);
 	}
+}
 
-	// Fetching tab dates from Heliotropium
+
+/**
+ * Fetches individual tab dates from Heliotropium extension
+ * @param {ChromeTab[]} tabs - Array of tabs
+ * @param {Map<number, TabDateInfo>} tabInfoMap - Tab info map to update
+ * @returns {Promise<void>}
+ * @see for Heliotropium see: {@link https://github.com/myakura/heliotropium}
+ */
+async function fetchHeliotropiumDates(tabs, tabInfoMap) {
+	const tabIds = tabs.map((tab) => tab.id);
+	const manifest = chrome.runtime.getManifest();
+	const heliotropiumConfig = manifest.externals?.heliotropium;
+
 	if (!heliotropiumConfig) {
 		console.error("Heliotropium configuration is missing in manifest.json");
+		return;
 	}
-	else {
-		const { FIREFOX_EXTENSION_ID, CHROME_EXTENSION_ID } = heliotropiumConfig;
-		const extensionId = navigator.userAgent.includes('Firefox')
-			? FIREFOX_EXTENSION_ID
-			: CHROME_EXTENSION_ID;
 
-		try {
-			const response = await chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds });
+	const { FIREFOX_EXTENSION_ID, CHROME_EXTENSION_ID } = heliotropiumConfig;
+	const extensionId = navigator.userAgent.includes('Firefox')
+		? FIREFOX_EXTENSION_ID
+		: CHROME_EXTENSION_ID;
 
-			if (response && !response.error && Array.isArray(response.data)) {
-				const dateMap = new Map(response.data.map((item) => [item.tabId, item]));
-				// Merge fetched data with fallback data to ensure all tabs are included.
-				for (const tab of tabs) {
-					if (dateMap.has(tab.id)) {
-						const existing = tabInfoMap.get(tab.id);
-						const fetched = dateMap.get(tab.id);
-						tabInfoMap.set(tab.id, { ...existing, ...fetched });
-					}
+	try {
+		const response = await chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds });
+
+		if (response && !response.error && Array.isArray(response.data)) {
+			const dateMap = new Map(response.data.map((item) => [item.tabId, item]));
+			// Merge fetched data with fallback data to ensure all tabs are included.
+			for (const tab of tabs) {
+				if (dateMap.has(tab.id)) {
+					const existing = tabInfoMap.get(tab.id);
+					const fetched = dateMap.get(tab.id);
+					tabInfoMap.set(tab.id, { ...existing, ...fetched });
 				}
 			}
-			else {
-				console.log('No response, error, or invalid data from Heliotropium:', response?.error || response);
-			}
-		}
-		catch (error) {
-			console.log('Failed to fetch tab dates. Heliotropium might not be installed.', error);
+		} else {
+			console.log('No response, error, or invalid data from Heliotropium:', response?.error || response);
 		}
 	}
+	catch (error) {
+		console.log('Failed to fetch tab dates. Heliotropium might not be installed.', error);
+	}
+}
 
+
+/**
+ * Fetches date information for tabs using Heliotropium extension and tab group titles
+ * @param {ChromeTab[]} tabs
+ * @returns {Promise<Map<number, TabDateInfo>>} Map for tab dates including group information
+ */
+async function fetchTabDates(tabs) {
+	await reloadUnloadedTabs(tabs);
+	const tabInfoMap = createTabInfoMap(tabs);
+	await fetchTabGroupDates(tabs, tabInfoMap);
+	await fetchHeliotropiumDates(tabs, tabInfoMap);
 	return tabInfoMap;
 }
 
