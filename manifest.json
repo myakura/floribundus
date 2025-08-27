@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "Floribundus",
-	"version": "0.11.0",
+	"version": "0.12.0",
 	"description": "Sort tabs. Either by URL or by date (requires the other extension).",
 	"icons": {
 		"48": "icons/icon_gray.png",
@@ -23,11 +23,11 @@
 			"description": "Sort tabs by date"
 		}
 	},
-	"permissions": ["tabs"],
+	"permissions": ["tabs", "tabGroups"],
 	"browser_specific_settings": {
 		"gecko": {
 			"id": "{ea9d3a55-e821-4554-a9ce-e3e93b011b32}",
-			"strict_min_version": "121.0"
+			"strict_min_version": "139.0"
 		}
 	},
 	"externals": {

@@ -2,10 +2,6 @@
  * @file background script for sorting selected tabs by date or URL
  * @author Masataka Yakura
  */
-/**
- * @file background script for grouping selected tabs
- * @author Masataka Yakura
- */
 
 /// <reference path="./types.js" />
 
@@ -83,9 +79,9 @@ async function getSelectedTabs() {
 
 
 /**
- * Fetches date information for tabs using Heliotropium extension
+ * Fetches date information for tabs using Heliotropium extension and tab group titles
  * @param {ChromeTab[]} tabs
- * @returns {Promise<Map<number, TabDateInfo>>} A map where keys are tab IDs and values are date info objects
+ * @returns {Promise<Map<number, TabDateInfo>>} Map for tab dates including group information
  * @see for Heliotropium see: {@link https://github.com/myakura/heliotropium}
  */
 async function fetchTabDates(tabs) {
@@ -135,45 +131,91 @@ async function fetchTabDates(tabs) {
 		url: tab.url,
 		title: tab.title,
 		dateString: null,
-		date: null
+		date: null,
+		groupId: null,
+		groupDate: null
 	}]));
 
-	if (!heliotropiumConfig) {
-		console.error("Heliotropium configuration is missing in manifest.json");
-		return tabInfoMap;
-	}
+	// Fetch tab group information and add group dates to tab info
+	const groupIds = [...new Set(tabs.map((tab) => tab.groupId).filter((id) => id !== chrome.tabGroups.TAB_GROUP_ID_NONE))];
 
-	const { FIREFOX_EXTENSION_ID, CHROME_EXTENSION_ID } = heliotropiumConfig;
-	const extensionId = navigator.userAgent.includes('Firefox')
-		? FIREFOX_EXTENSION_ID
-		: CHROME_EXTENSION_ID;
+	if (groupIds.length > 0) {
+		try {
+			const groups = await Promise.all(groupIds.map((id) => chrome.tabGroups.get(id)));
+			const groupDateMap = new Map();
 
-	try {
-		const response = await chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds });
+			for (const group of groups) {
+				const groupDate = extractDate(group.title);
+				groupDateMap.set(group.id, groupDate);
+			}
 
-		if (!response || response.error || !Array.isArray(response.data)) {
-			console.log('No response, error, or invalid data from Heliotropium:', response?.error || response);
-			return tabInfoMap;
-		}
-
-		const dateMap = new Map(response.data.map((item) => [item.tabId, item]));
-		// Merge fetched data with fallback data to ensure all tabs are included.
-		for (const tab of tabs) {
-			if (dateMap.has(tab.id)) {
-				tabInfoMap.set(tab.id, dateMap.get(tab.id));
+			// Add group dates to tab info
+			for (const [tabId, tabInfo] of tabInfoMap) {
+				if (tabInfo.groupId && groupDateMap.has(tabInfo.groupId)) {
+					tabInfo.groupDate = groupDateMap.get(tabInfo.groupId);
+				}
 			}
 		}
-		return tabInfoMap;
+		catch (error) {
+			console.error('Failed to fetch tab group information:', error);
+		}
+	}
 
+	// Fetching tab dates from Heliotropium
+	if (!heliotropiumConfig) {
+		console.error("Heliotropium configuration is missing in manifest.json");
 	}
-	catch (error) {
-		console.log('Failed to fetch tab dates. Heliotropium might not be installed.', error);
-		return tabInfoMap;
+	else {
+		const { FIREFOX_EXTENSION_ID, CHROME_EXTENSION_ID } = heliotropiumConfig;
+		const extensionId = navigator.userAgent.includes('Firefox')
+			? FIREFOX_EXTENSION_ID
+			: CHROME_EXTENSION_ID;
+
+		try {
+			const response = await chrome.runtime.sendMessage(extensionId, { action: 'get-dates', tabIds });
+
+			if (response && !response.error && Array.isArray(response.data)) {
+				const dateMap = new Map(response.data.map((item) => [item.tabId, item]));
+				// Merge fetched data with fallback data to ensure all tabs are included.
+				for (const tab of tabs) {
+					if (dateMap.has(tab.id)) {
+						const existing = tabInfoMap.get(tab.id);
+						const fetched = dateMap.get(tab.id);
+						tabInfoMap.set(tab.id, { ...existing, ...fetched });
+					}
+				}
+			}
+			else {
+				console.log('No response, error, or invalid data from Heliotropium:', response?.error || response);
+			}
+		}
+		catch (error) {
+			console.log('Failed to fetch tab dates. Heliotropium might not be installed.', error);
+		}
 	}
+
+	return tabInfoMap;
 }
 
 
 // Utility functions for date parsing and sorting
+
+
+/**
+ * Extracts date from a string (expects YYYY-MM-DD format)
+ * @param {string} text - Input string to parse
+ * @returns {ParsedDate | null} Parsed date object or null if no valid date found
+ */
+function extractDate(text) {
+	if (!text) return null;
+
+	const match = text.match(/(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})/);
+	if (match) {
+		const { year, month, day } = match.groups;
+		return { year, month, day };
+	}
+	return null;
+}
 
 
 /**
@@ -193,9 +235,9 @@ function getComparableDate(dateObj) {
 
 
 /**
- * A robust, shared function to sort tabs by date.
+ * A robust, shared function to sort tabs by date, considering both individual tab dates and group dates.
  * @param {ChromeTab[]} tabs
- * @param {Map<number, TabDateInfo>} tabDataMap - The map of tabIDs to date info.
+ * @param {Map<number, TabDateInfo>} tabDataMap - The map of tabIDs to date info including group information.
  * @param {'end' | 'start' | 'preserve'} undatedPlacement - How to handle tabs without a date.
  * - 'start': Move all undated tabs to the beginning.
  * - 'end': Move all undated tabs to the end.
@@ -208,14 +250,34 @@ function sortTabsByDate(tabs, tabDataMap, undatedPlacement = 'end') {
 	console.log('Current tab ids:', tabs.map((tab) => tab.id));
 
 	const sortedTabs = tabs.toSorted((a, b) => {
-		const dateA = getComparableDate(tabDataMap.get(a.id)?.date);
-		const dateB = getComparableDate(tabDataMap.get(b.id)?.date);
+		const tabInfoA = tabDataMap.get(a.id);
+		const tabInfoB = tabDataMap.get(b.id);
+
+		// Get dates - use group date if tab is in a group, otherwise use individual tab date
+		const dateA = tabInfoA?.groupDate
+			? getComparableDate(tabInfoA.groupDate)
+			: getComparableDate(tabInfoA?.date);
+		const dateB = tabInfoB?.groupDate
+			? getComparableDate(tabInfoB.groupDate)
+			: getComparableDate(tabInfoB?.date);
 
 		// Both have dates: sort chronologically
-		if (dateA && dateB) { return dateA - dateB; }
+		if (dateA && dateB) {
+			// If both tabs are in the same group, preserve their relative order
+			if (a.groupId === b.groupId && a.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+				return a.index - b.index;
+			}
+			return dateA - dateB;
+		}
 
 		// Neither has a date: preserve original relative order
-		if (!dateA && !dateB) { return 0; }
+		if (!dateA && !dateB) {
+			// If both tabs are in the same group, preserve their relative order
+			if (a.groupId === b.groupId && a.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+				return a.index - b.index;
+			}
+			return 0;
+		}
 
 		// One is undated
 		if (!dateA) { return undatedPlacement === 'start' ? -1 : 1; }
@@ -314,7 +376,8 @@ async function sortAndMoveTabsByUrl(tabs) {
 		await chrome.tabs.move(sortedTabIds, { index: startIndex });
 
 		await flashBadge({ success: true });
-	} catch (error) {
+	}
+	catch (error) {
 		console.error('Error sorting tabs by URL:', error);
 		await flashBadge({ success: false });
 	}
@@ -323,14 +386,14 @@ async function sortAndMoveTabsByUrl(tabs) {
 
 /**
  * Sorts selected tabs by date using Heliotropium data and moves them to maintain their relative position
+ * It's tab group aware - uses group dates for grouped tabs, individual dates for ungrouped tabs
  * @param {ChromeTab[]} tabs - Array of tabs to sort by date
- * @param {Map<number, TabDateInfo>} tabDataMap - Map of tab IDs to their date information
+ * @param {Map<number, TabDateInfo>} tabDataMap - Map of tab IDs to their date information including group data
  * @returns {Promise<void>}
  */
 async function sortAndMoveTabsByDate(tabs, tabDataMap) {
 	await setWorkingBadge();
 	try {
-		// Use the shared sorter, preserving undated tab order relative to each other
 		const sortedTabs = sortTabsByDate(tabs, tabDataMap, 'preserve');
 		const sortedTabIds = sortedTabs.map((tab) => tab.id);
 
@@ -339,7 +402,8 @@ async function sortAndMoveTabsByDate(tabs, tabDataMap) {
 		await chrome.tabs.move(sortedTabIds, { index: startIndex });
 
 		await flashBadge({ success: true });
-	} catch (error) {
+	}
+	catch (error) {
 		console.error('Error sorting tabs by date:', error);
 		await flashBadge({ success: false });
 	}
@@ -362,7 +426,8 @@ async function mainSortAction() {
 	try {
 		const tabDataMap = await fetchTabDates(tabs);
 		await sortAndMoveTabsByDate(tabs, tabDataMap);
-	} catch (error) {
+	}
+	catch (error) {
 		console.warn('Heliotropium fetch failed. Falling back to URL sort.', error);
 		await sortAndMoveTabsByUrl(tabs);
 	}

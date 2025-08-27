@@ -30,4 +30,6 @@
  * @property {string|null} title
  * @property {string|null} dateString - The raw date string found on the page
  * @property {ParsedDate|null} date - The parsed date object
+ * @property {number|null} groupId - The ID of the group that the tab belongs to
+ * @property {ParsedDate|null} groupDate - The parsed date from the group title (if in a group)
  */
