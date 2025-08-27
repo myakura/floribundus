@@ -108,7 +108,7 @@ async function fetchTabDates(tabs) {
 					chrome.tabs.onUpdated.addListener(listener);
 					chrome.tabs.reload(tab.id);
 				}),
-				new Promise(resolve => {
+				new Promise((resolve) => {
 					setTimeout(() => {
 						resolve({ status: 'timeout', tabId: tab.id });
 					}, RELOAD_TIMEOUT);
