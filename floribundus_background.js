@@ -50,6 +50,42 @@ async function setWorkingBadge() {
 }
 
 
+/**
+ * Detects if the system is in dark mode
+ * @returns {boolean} true if dark mode is enabled, false otherwise
+ */
+function isDarkMode() {
+	// Note: this works only on non-service-worker contexts since its dependance on `window.matchMedia`. This is intentional as there's not really cross-browser way to detect light/dark mode for icon updates.
+	if (typeof window !== 'undefined' && 'matchMedia' in window) {
+		return window.matchMedia('(prefers-color-scheme: dark)').matches;
+	}
+	return false;
+}
+
+
+/**
+ * Updates the extension icon based on dark mode and enables/disables the extension based on the number of selected tabs
+ * @todo switch to use `icon_variants` once it's widely supported
+ */
+async function updateIcon() {
+	const icon = isDarkMode() ? 'icons/icon_white.png' : 'icons/icon_black.png';
+	try {
+		await chrome.action.setIcon({ path: icon });
+
+		const tabs = await getSelectedTabs();
+		if (tabs.length < 2) {
+			await chrome.action.disable();
+			return;
+		}
+
+		await chrome.action.enable();
+	}
+	catch (error) {
+		console.log(error);
+	}
+}
+
+
 // Utility functions
 
 
@@ -75,7 +111,7 @@ async function getSelectedTabs() {
 }
 
 
-// Function to communicate with Heliotropium extension
+// Function to get dates from tab groups or by communicating with Heliotropium extension
 
 
 /**
@@ -166,7 +202,8 @@ async function fetchTabGroupDates(tabs, tabInfoMap) {
 				tabInfo.groupDate = groupDateMap.get(tabInfo.groupId);
 			}
 		}
-	} catch (error) {
+	}
+	catch (error) {
 		console.error('Failed to fetch tab group information:', error);
 	}
 }
@@ -207,7 +244,8 @@ async function fetchHeliotropiumDates(tabs, tabInfoMap) {
 					tabInfoMap.set(tab.id, { ...existing, ...fetched });
 				}
 			}
-		} else {
+		}
+		else {
 			console.log('No response, error, or invalid data from Heliotropium:', response?.error || response);
 		}
 	}
@@ -327,42 +365,6 @@ function sortTabsByDate(tabs, tabDataMap, undatedPlacement = 'end') {
 
 	console.log('Sorted tab ids:', sortedTabs.map((tab) => tab.id));
 	return sortedTabs;
-}
-
-
-/**
- * Detects if the system is in dark mode
- * @returns {boolean} True if dark mode is enabled, false otherwise
- */
-function isDarkMode() {
-	// Note: this works only on non-service-worker contexts since its dependance on `window.matchMedia`. This is intentional as there's not really cross-browser way to detect light/dark mode for icon updates.
-	if (typeof window !== 'undefined' && 'matchMedia' in window) {
-		return window.matchMedia('(prefers-color-scheme: dark)').matches;
-	}
-	return false;
-}
-
-
-/**
- * Updates the extension icon based on dark mode and enables/disables the extension based on the number of selected tabs
- * @todo switch to use `icon_variants` once it's widely supported
- */
-async function updateIcon() {
-	const icon = isDarkMode() ? 'icons/icon_white.png' : 'icons/icon_black.png';
-	try {
-		await chrome.action.setIcon({ path: icon });
-
-		const tabs = await getSelectedTabs();
-		if (tabs.length < 2) {
-			await chrome.action.disable();
-			return;
-		}
-
-		await chrome.action.enable();
-	}
-	catch (error) {
-		console.log(error);
-	}
 }
 
 
