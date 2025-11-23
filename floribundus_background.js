@@ -115,50 +115,6 @@ async function getSelectedTabs() {
 
 
 /**
- * Reloads unloaded tabs and waits for them to complete loading
- * @param {ChromeTab[]} tabs - Array of tabs to check and reload if needed
- * @returns {Promise<void>}
- */
-async function reloadUnloadedTabs(tabs) {
-	const unloadedTabs = tabs.filter((tab) => tab.discarded || tab.status !== 'complete');
-
-	if (unloadedTabs.length === 0) return;
-
-	const RELOAD_TIMEOUT = 15000;
-
-	const reloadPromises = unloadedTabs.map((tab) => {
-		let listener; // Store listener reference outside Promise
-
-		return Promise.race([
-			new Promise((resolve) => {
-				listener = (tabId, changeInfo) => {
-					if (tabId === tab.id && changeInfo.status === 'complete') {
-						chrome.tabs.onUpdated.removeListener(listener);
-						resolve({ status: 'reloaded', tabId: tab.id });
-					}
-				};
-				chrome.tabs.onUpdated.addListener(listener);
-				chrome.tabs.reload(tab.id);
-			}),
-			new Promise((resolve) => {
-				setTimeout(() => {
-					resolve({ status: 'timeout', tabId: tab.id });
-				}, RELOAD_TIMEOUT);
-			})
-		]).finally(() => {
-			// Clean up listener regardless of how Promise resolved
-			if (listener) {
-				chrome.tabs.onUpdated.removeListener(listener);
-			}
-		});
-	});
-
-	const results = await Promise.all(reloadPromises);
-	console.log('Tab reload results:', results);
-}
-
-
-/**
  * Creates initial tab info map with default values
  * @param {ChromeTab[]} tabs - Array of tabs
  * @returns {Map<number, TabDateInfo>} Map of tab IDs to initial tab info
@@ -261,7 +217,6 @@ async function fetchHeliotropiumDates(tabs, tabInfoMap) {
  * @returns {Promise<Map<number, TabDateInfo>>} Map for tab dates including group information
  */
 async function fetchTabDates(tabs) {
-	await reloadUnloadedTabs(tabs);
 	const tabInfoMap = createTabInfoMap(tabs);
 	await fetchTabGroupDates(tabs, tabInfoMap);
 	await fetchHeliotropiumDates(tabs, tabInfoMap);
