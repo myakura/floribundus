@@ -3,7 +3,7 @@
  * @author Masataka Yakura
  */
 
-/// <reference path="./types.js" />
+/** @import {ChromeTab, ParsedDate, TabDateInfo} from "./types.js" */
 
 
 // Shared utility functions for updating UI
