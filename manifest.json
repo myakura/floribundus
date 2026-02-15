@@ -1,8 +1,8 @@
 {
 	"manifest_version": 3,
 	"name": "Floribundus",
-	"version": "0.13.0",
-	"description": "Sort tabs. Either by URL or by date (requires the other extension).",
+	"version": "0.14.0",
+	"description": "Sort tabs. Either by URL or by date (requires the Heliotropium extension).",
 	"icons": {
 		"48": "icons/icon_gray.png",
 		"96": "icons/icon_gray.png"
